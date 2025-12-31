@@ -1,0 +1,32 @@
+{
+  "name": "ai-interviewer",
+  "version": "1.0.0",
+  "description": "Adaptive AI Interviewer with Cognitive and Behavioral Analysis",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspace=client && npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "start": "npm run start --workspace=server",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "AI Interviewer Team",
+  "license": "MIT"
+}

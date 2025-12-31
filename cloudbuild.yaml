@@ -1,0 +1,38 @@
+# Google Cloud Build configuration
+# Triggered on push to main branch
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/ai-interviewer:$COMMIT_SHA', '.']
+
+  # Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/ai-interviewer:$COMMIT_SHA']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ai-interviewer'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/ai-interviewer:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+      - '--port'
+      - '5000'
+
+images:
+  - 'gcr.io/$PROJECT_ID/ai-interviewer:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
