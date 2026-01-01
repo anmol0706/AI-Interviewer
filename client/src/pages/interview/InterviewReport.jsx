@@ -1,7 +1,11 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { interviewService } from '../../services/interviewService';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import toast from 'react-hot-toast';
 import {
     ArrowLeft,
     Download,
@@ -23,6 +27,8 @@ import {
 
 export default function InterviewReport() {
     const { sessionId } = useParams();
+    const reportRef = useRef(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['interview-report', sessionId],
@@ -30,6 +36,56 @@ export default function InterviewReport() {
     });
 
     const report = data?.data;
+
+    // PDF Download function
+    const handleDownloadPDF = async () => {
+        if (!reportRef.current) return;
+
+        setIsDownloading(true);
+        toast.loading('Generating PDF...', { id: 'pdf-download' });
+
+        try {
+            const element = reportRef.current;
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#0a0a0f'
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const imgWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            // Add more pages if content is longer
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save(`interview-report-${sessionId}.pdf`);
+            toast.success('PDF downloaded successfully!', { id: 'pdf-download' });
+        } catch (error) {
+            console.error('PDF generation failed:', error);
+            toast.error('Failed to generate PDF', { id: 'pdf-download' });
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     const getScoreColor = (score) => {
         if (score >= 85) return 'text-success-400';
@@ -72,7 +128,7 @@ export default function InterviewReport() {
     const { session, overallScores, analytics, responses, summary } = report;
 
     return (
-        <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 lg:space-y-8">
+        <div ref={reportRef} className="max-w-5xl mx-auto space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Header */}
             <div className="flex flex-col gap-3 sm:gap-4">
                 <div className="text-center sm:text-left">
@@ -90,9 +146,13 @@ export default function InterviewReport() {
                     <button className="p-2 lg:p-3 rounded-lg lg:rounded-xl bg-dark-800/50 text-dark-400 hover:bg-dark-700 transition-colors">
                         <Share2 className="w-4 h-4 lg:w-5 lg:h-5" />
                     </button>
-                    <button className="px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg lg:rounded-xl bg-dark-800/80 text-white text-[10px] sm:text-xs lg:text-sm font-medium flex items-center gap-1.5 lg:gap-2 hover:bg-dark-700 transition-colors">
+                    <button
+                        onClick={handleDownloadPDF}
+                        disabled={isDownloading}
+                        className="px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg lg:rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] sm:text-xs lg:text-sm font-medium flex items-center gap-1.5 lg:gap-2 transition-colors"
+                    >
                         <Download className="w-3 h-3 lg:w-4 lg:h-4" />
-                        <span className="hidden sm:inline">Download</span> PDF
+                        <span className="hidden sm:inline">{isDownloading ? 'Generating...' : 'Download'}</span> PDF
                     </button>
                 </div>
             </div>
