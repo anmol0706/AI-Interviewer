@@ -5,25 +5,124 @@ import { interviewPrompts } from './prompts.js';
 
 class GeminiService {
     constructor() {
-        this.ai = null;
+        this.aiInstances = []; // Array of AI instances for each API key
+        this.apiKeys = [];
+        this.currentKeyIndex = 0;
         this.modelName = 'gemini-2.5-flash';
         this.chatSessions = new Map(); // Store conversation history per session
+        this.keyFailures = new Map(); // Track failures per key
         this.initialize();
     }
 
     initialize() {
         try {
-            if (!config.google.geminiApiKey) {
-                logger.warn('Gemini API key not configured. AI features will be limited.');
+            // Get all API keys from config
+            this.apiKeys = config.google.geminiApiKeys || [];
+
+            // Fallback to single key if no multiple keys configured
+            if (this.apiKeys.length === 0 && config.google.geminiApiKey) {
+                this.apiKeys = [config.google.geminiApiKey];
+            }
+
+            if (this.apiKeys.length === 0) {
+                logger.warn('No Gemini API keys configured. AI features will be limited.');
                 return;
             }
 
-            this.ai = new GoogleGenAI({ apiKey: config.google.geminiApiKey });
+            // Initialize AI instance for each API key
+            this.aiInstances = this.apiKeys.map((apiKey, index) => {
+                try {
+                    const ai = new GoogleGenAI({ apiKey });
+                    logger.info(`✅ Gemini AI instance ${index + 1}/${this.apiKeys.length} initialized`);
+                    return ai;
+                } catch (error) {
+                    logger.error(`Failed to initialize Gemini instance ${index + 1}:`, error.message);
+                    return null;
+                }
+            }).filter(ai => ai !== null);
 
-            logger.info('✅ Gemini AI service initialized with gemini-2.5-flash');
+            if (this.aiInstances.length > 0) {
+                logger.info(`✅ Gemini AI service initialized with ${this.aiInstances.length} API key(s) using gemini-2.5-flash`);
+            } else {
+                logger.error('No Gemini AI instances could be initialized');
+            }
         } catch (error) {
             logger.error('Failed to initialize Gemini:', error);
         }
+    }
+
+    /**
+     * Get current AI instance
+     */
+    get ai() {
+        if (this.aiInstances.length === 0) return null;
+        return this.aiInstances[this.currentKeyIndex];
+    }
+
+    /**
+     * Switch to next available API key
+     */
+    switchToNextKey() {
+        const previousIndex = this.currentKeyIndex;
+        this.currentKeyIndex = (this.currentKeyIndex + 1) % this.aiInstances.length;
+
+        // Track failure on previous key
+        const failureCount = (this.keyFailures.get(previousIndex) || 0) + 1;
+        this.keyFailures.set(previousIndex, failureCount);
+
+        logger.warn(`🔄 Switching from API key ${previousIndex + 1} to key ${this.currentKeyIndex + 1} (failures: ${failureCount})`);
+
+        return this.currentKeyIndex !== previousIndex;
+    }
+
+    /**
+     * Check if error is a rate limit or quota error
+     */
+    isRateLimitError(error) {
+        return error.status === 429 ||
+            error.message?.includes('429') ||
+            error.message?.includes('quota') ||
+            error.message?.includes('RESOURCE_EXHAUSTED') ||
+            error.message?.includes('rate limit');
+    }
+
+    /**
+     * Execute API call with automatic key rotation on failure
+     */
+    async executeWithFallback(apiCall, retryCount = 0) {
+        const maxRetries = 3;
+        const maxKeyAttempts = this.aiInstances.length;
+        let keyAttempts = 0;
+
+        while (keyAttempts < maxKeyAttempts) {
+            try {
+                return await apiCall(this.ai);
+            } catch (error) {
+                if (this.isRateLimitError(error)) {
+                    logger.warn(`API key ${this.currentKeyIndex + 1} hit rate limit: ${error.message}`);
+
+                    // Try switching to next key
+                    if (this.aiInstances.length > 1) {
+                        this.switchToNextKey();
+                        keyAttempts++;
+                        continue;
+                    }
+
+                    // If only one key, do exponential backoff
+                    if (retryCount < maxRetries) {
+                        const delay = 2000 * Math.pow(2, retryCount);
+                        logger.warn(`Retrying with same key in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this.executeWithFallback(apiCall, retryCount + 1);
+                    }
+
+                    throw new Error('All API keys exhausted. Please try again later.');
+                }
+                throw error;
+            }
+        }
+
+        throw new Error('All API keys failed. Please try again later.');
     }
 
     /**
@@ -56,12 +155,9 @@ class GeminiService {
     }
 
     /**
-     * Send a message in an existing chat session with retry logic
+     * Send a message in an existing chat session with automatic key rotation
      */
-    async sendChatMessage(sessionId, message, retryCount = 0) {
-        const maxRetries = 3;
-        const baseDelay = 2000; // 2 seconds
-
+    async sendChatMessage(sessionId, message) {
         let session = this.chatSessions.get(sessionId);
 
         // Auto-create session if it doesn't exist (e.g., after server restart)
@@ -83,13 +179,14 @@ class GeminiService {
         });
 
         try {
-            // Make API call with full history
-            const response = await this.ai.models.generateContent({
-                model: this.modelName,
-                contents: session.history,
+            // Use executeWithFallback for automatic key rotation
+            const responseText = await this.executeWithFallback(async (ai) => {
+                const response = await ai.models.generateContent({
+                    model: this.modelName,
+                    contents: session.history,
+                });
+                return response.text;
             });
-
-            const responseText = response.text;
 
             // Add model response to history
             session.history.push({
@@ -101,17 +198,7 @@ class GeminiService {
         } catch (error) {
             // Remove the failed message from history
             session.history.pop();
-
-            // Check if it's a rate limit error (429)
-            if (error.status === 429 || error.message?.includes('429') || error.message?.includes('quota')) {
-                if (retryCount < maxRetries) {
-                    const delay = baseDelay * Math.pow(2, retryCount);
-                    logger.warn(`Rate limited, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    return this.sendChatMessage(sessionId, message, retryCount + 1);
-                }
-                throw new Error('API rate limit exceeded. Please try again in a few minutes.');
-            }
+            logger.error(`sendChatMessage failed for session ${sessionId}:`, error.message);
             throw error;
         }
     }
@@ -238,12 +325,14 @@ Provide a comprehensive evaluation in JSON format:
         if (this.chatSessions.has(sessionId)) {
             text = await this.sendChatMessage(sessionId, evaluationPrompt);
         } else {
-            // No session - make a direct call to the model with proper format
-            const response = await this.ai.models.generateContent({
-                model: this.modelName,
-                contents: [{ role: 'user', parts: [{ text: evaluationPrompt }] }],
+            // No session - make a direct call with fallback
+            text = await this.executeWithFallback(async (ai) => {
+                const response = await ai.models.generateContent({
+                    model: this.modelName,
+                    contents: [{ role: 'user', parts: [{ text: evaluationPrompt }] }],
+                });
+                return response.text;
             });
-            text = response.text;
         }
 
         return this.parseAIResponse(text);
@@ -278,11 +367,13 @@ Respond in JSON format with a "question" field.`;
             if (this.chatSessions.has(sessionId)) {
                 text = await this.sendChatMessage(sessionId, followUpPrompt);
             } else {
-                const response = await this.ai.models.generateContent({
-                    model: this.modelName,
-                    contents: [{ role: 'user', parts: [{ text: followUpPrompt }] }],
+                text = await this.executeWithFallback(async (ai) => {
+                    const response = await ai.models.generateContent({
+                        model: this.modelName,
+                        contents: [{ role: 'user', parts: [{ text: followUpPrompt }] }],
+                    });
+                    return response.text;
                 });
-                text = response.text;
             }
 
             return this.parseAIResponse(text);
@@ -366,11 +457,13 @@ Generate a detailed summary in JSON format:
         if (this.chatSessions.has(sessionId)) {
             text = await this.sendChatMessage(sessionId, summaryPrompt);
         } else {
-            const response = await this.ai.models.generateContent({
-                model: this.modelName,
-                contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }],
+            text = await this.executeWithFallback(async (ai) => {
+                const response = await ai.models.generateContent({
+                    model: this.modelName,
+                    contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }],
+                });
+                return response.text;
             });
-            text = response.text;
         }
 
         // Clean up session after summary

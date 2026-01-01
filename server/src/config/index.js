@@ -37,6 +37,10 @@ const config = {
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
     credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS,
     geminiApiKey: process.env.GEMINI_API_KEY,
+    // Multiple API keys for fallback (comma-separated)
+    geminiApiKeys: process.env.GEMINI_API_KEYS
+      ? process.env.GEMINI_API_KEYS.split(',').map(key => key.trim()).filter(key => key)
+      : (process.env.GEMINI_API_KEY ? [process.env.GEMINI_API_KEY] : []),
     speechApiKey: process.env.GOOGLE_SPEECH_API_KEY,
   },
 
