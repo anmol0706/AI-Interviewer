@@ -119,24 +119,24 @@ export default function NewInterview() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto px-2 sm:px-0">
             {/* Progress Steps */}
-            <div className="flex items-center justify-center mb-12">
+            <div className="flex items-center justify-center mb-5 sm:mb-8 lg:mb-12">
                 {[1, 2, 3].map((s) => (
                     <div key={s} className="flex items-center">
                         <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all ${s === step
-                                    ? 'bg-primary-500 text-white'
-                                    : s < step
-                                        ? 'bg-success-500 text-white'
-                                        : 'bg-dark-700 text-dark-400'
+                            className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center font-medium text-[10px] sm:text-sm lg:text-base transition-all ${s === step
+                                ? 'bg-primary-500 text-white'
+                                : s < step
+                                    ? 'bg-success-500 text-white'
+                                    : 'bg-dark-700 text-dark-400'
                                 }`}
                         >
                             {s < step ? '✓' : s}
                         </div>
                         {s < 3 && (
                             <div
-                                className={`w-20 h-1 mx-2 rounded ${s < step ? 'bg-success-500' : 'bg-dark-700'
+                                className={`w-8 sm:w-16 lg:w-24 h-0.5 lg:h-1 mx-1 lg:mx-2 rounded ${s < step ? 'bg-success-500' : 'bg-dark-700'
                                     }`}
                             />
                         )}
@@ -151,44 +151,45 @@ export default function NewInterview() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                 >
-                    <h1 className="text-3xl font-bold text-white text-center mb-2">
+                    <h1 className="text-lg sm:text-xl lg:text-3xl font-bold text-white text-center mb-1 lg:mb-2">
                         Choose Interview Type
                     </h1>
-                    <p className="text-dark-400 text-center mb-8">
+                    <p className="text-dark-400 text-center text-xs sm:text-sm lg:text-base mb-4 sm:mb-6 lg:mb-8">
                         Select the type of interview you want to practice
                     </p>
 
-                    <div className="grid md:grid-cols-2 gap-4 mb-8">
+                    {/* Interview type cards */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-6 lg:mb-8">
                         {interviewTypes.map((type) => (
                             <button
                                 key={type.id}
                                 onClick={() => setConfig({ ...config, interviewType: type.id })}
-                                className={`p-6 rounded-2xl text-left transition-all ${config.interviewType === type.id
-                                        ? 'glass-card border-primary-500/50 shadow-glow-sm'
-                                        : 'glass-card border-transparent hover:border-dark-600'
+                                className={`p-2.5 sm:p-4 lg:p-6 rounded-lg sm:rounded-xl lg:rounded-2xl text-left transition-all ${config.interviewType === type.id
+                                    ? 'bg-dark-800/80 border border-primary-500/50 shadow-lg shadow-primary-500/10'
+                                    : 'bg-dark-900/60 border border-dark-800/50 hover:border-dark-600'
                                     }`}
                             >
-                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${type.color} flex items-center justify-center mb-4`}>
-                                    <type.icon className="w-6 h-6 text-white" />
+                                <div className={`w-7 h-7 sm:w-9 sm:h-9 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-gradient-to-br ${type.color} flex items-center justify-center mb-2 sm:mb-3 lg:mb-4`}>
+                                    <type.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-6 lg:h-6 text-white" />
                                 </div>
-                                <h3 className="text-xl font-semibold text-white mb-1">{type.name}</h3>
-                                <p className="text-dark-400 text-sm">{type.description}</p>
+                                <h3 className="text-xs sm:text-sm lg:text-lg font-semibold text-white mb-0.5 lg:mb-1">{type.name}</h3>
+                                <p className="text-dark-500 text-[9px] sm:text-xs lg:text-sm leading-tight line-clamp-2">{type.description}</p>
                             </button>
                         ))}
                     </div>
 
                     {/* Sub Categories */}
                     {selectedType && (
-                        <div className="glass-card p-6 mb-8">
-                            <h4 className="text-sm font-medium text-dark-400 mb-3">Focus Area (Optional)</h4>
-                            <div className="flex flex-wrap gap-2">
+                        <div className="bg-dark-900/60 border border-dark-800/50 rounded-lg lg:rounded-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8">
+                            <h4 className="text-[10px] sm:text-xs lg:text-sm font-medium text-dark-500 mb-2 lg:mb-3">Focus Area (Optional)</h4>
+                            <div className="flex flex-wrap gap-1.5 lg:gap-2">
                                 {selectedType.subCategories.map((sub) => (
                                     <button
                                         key={sub}
                                         onClick={() => setConfig({ ...config, subCategory: config.subCategory === sub ? '' : sub })}
-                                        className={`px-4 py-2 rounded-lg text-sm transition-all ${config.subCategory === sub
-                                                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/50'
-                                                : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
+                                        className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 rounded-md lg:rounded-lg text-[10px] sm:text-xs lg:text-sm transition-all ${config.subCategory === sub
+                                            ? 'bg-primary-500/20 text-primary-400 border border-primary-500/50'
+                                            : 'bg-dark-800/50 text-dark-400 hover:bg-dark-700'
                                             }`}
                                     >
                                         {sub}
@@ -207,75 +208,76 @@ export default function NewInterview() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                 >
-                    <h1 className="text-3xl font-bold text-white text-center mb-2">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white text-center mb-1">
                         Configure Your Interview
                     </h1>
-                    <p className="text-dark-400 text-center mb-8">
+                    <p className="text-dark-400 text-center text-xs sm:text-sm mb-4 sm:mb-6">
                         Customize the interview experience
                     </p>
 
                     {/* Interviewer Personality */}
-                    <div className="mb-8">
-                        <h4 className="text-lg font-medium text-white mb-4">Interviewer Style</h4>
-                        <div className="grid md:grid-cols-3 gap-4">
+                    <div className="mb-4 sm:mb-6">
+                        <h4 className="text-xs sm:text-sm font-medium text-dark-400 mb-2 sm:mb-3">Interviewer Style</h4>
+                        <div className="space-y-1.5 sm:space-y-2">
                             {personalities.map((p) => (
                                 <button
                                     key={p.id}
                                     onClick={() => setConfig({ ...config, personality: p.id })}
-                                    className={`p-4 rounded-xl text-left transition-all ${config.personality === p.id
-                                            ? 'glass-card border-primary-500/50'
-                                            : 'bg-dark-800/50 hover:bg-dark-800'
+                                    className={`w-full p-2.5 sm:p-3 rounded-lg text-left transition-all flex items-center gap-2.5 sm:gap-3 ${config.personality === p.id
+                                        ? 'bg-dark-800/80 border border-primary-500/50'
+                                        : 'bg-dark-900/60 border border-dark-800/50 hover:border-dark-600'
                                         }`}
                                 >
-                                    <p.icon className={`w-6 h-6 mb-2 ${config.personality === p.id ? 'text-primary-400' : 'text-dark-400'}`} />
-                                    <h5 className="font-medium text-white">{p.name}</h5>
-                                    <p className="text-dark-400 text-sm">{p.description}</p>
+                                    <p.icon className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${config.personality === p.id ? 'text-primary-400' : 'text-dark-500'}`} />
+                                    <div className="flex-1 min-w-0">
+                                        <h5 className="font-medium text-white text-xs sm:text-sm">{p.name}</h5>
+                                        <p className="text-dark-500 text-[10px] sm:text-xs truncate">{p.description}</p>
+                                    </div>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     {/* Difficulty */}
-                    <div className="mb-8">
-                        <h4 className="text-lg font-medium text-white mb-4">Starting Difficulty</h4>
-                        <div className="grid grid-cols-4 gap-3">
+                    <div className="mb-4 sm:mb-6">
+                        <h4 className="text-xs sm:text-sm font-medium text-dark-400 mb-2 sm:mb-3">Starting Difficulty</h4>
+                        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
                             {difficulties.map((d) => (
                                 <button
                                     key={d.id}
                                     onClick={() => setConfig({ ...config, difficulty: d.id })}
-                                    className={`p-4 rounded-xl text-center transition-all ${config.difficulty === d.id
-                                            ? 'glass-card border-primary-500/50'
-                                            : 'bg-dark-800/50 hover:bg-dark-800'
+                                    className={`p-2 sm:p-3 rounded-lg text-center transition-all ${config.difficulty === d.id
+                                        ? 'bg-dark-800/80 border border-primary-500/50'
+                                        : 'bg-dark-900/60 border border-dark-800/50 hover:border-dark-600'
                                         }`}
                                 >
-                                    <p className="font-medium text-white">{d.name}</p>
-                                    <p className="text-dark-500 text-xs mt-1">{d.description}</p>
+                                    <p className="font-medium text-white text-[10px] sm:text-xs">{d.name}</p>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     {/* Voice Toggle */}
-                    <div className="glass-card p-6 mb-8">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
+                    <div className="bg-dark-900/60 border border-dark-800/50 rounded-lg p-2.5 sm:p-3 mb-4 sm:mb-6">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                 {config.voiceEnabled ? (
-                                    <Mic className="w-6 h-6 text-primary-400" />
+                                    <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-primary-400 flex-shrink-0" />
                                 ) : (
-                                    <MicOff className="w-6 h-6 text-dark-400" />
+                                    <MicOff className="w-4 h-4 sm:w-5 sm:h-5 text-dark-500 flex-shrink-0" />
                                 )}
-                                <div>
-                                    <h5 className="font-medium text-white">Voice Interview</h5>
-                                    <p className="text-dark-400 text-sm">Answer questions using your microphone</p>
+                                <div className="min-w-0">
+                                    <h5 className="font-medium text-white text-xs sm:text-sm">Voice Interview</h5>
+                                    <p className="text-dark-500 text-[10px] sm:text-xs truncate">Use microphone to answer</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setConfig({ ...config, voiceEnabled: !config.voiceEnabled })}
-                                className={`w-14 h-8 rounded-full transition-all ${config.voiceEnabled ? 'bg-primary-500' : 'bg-dark-600'
+                                className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full flex-shrink-0 transition-all ${config.voiceEnabled ? 'bg-primary-500' : 'bg-dark-600'
                                     }`}
                             >
                                 <div
-                                    className={`w-6 h-6 rounded-full bg-white shadow transition-transform ${config.voiceEnabled ? 'translate-x-7' : 'translate-x-1'
+                                    className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white shadow transition-transform ${config.voiceEnabled ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0.5'
                                         }`}
                                 />
                             </button>
@@ -291,88 +293,88 @@ export default function NewInterview() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                 >
-                    <h1 className="text-3xl font-bold text-white text-center mb-2">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white text-center mb-1">
                         Target Position (Optional)
                     </h1>
-                    <p className="text-dark-400 text-center mb-8">
+                    <p className="text-dark-400 text-center text-xs sm:text-sm mb-4 sm:mb-6">
                         Customize questions for your dream role
                     </p>
 
-                    <div className="glass-card p-6 space-y-6 mb-8">
+                    <div className="bg-dark-900/60 border border-dark-800/50 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                         <div>
-                            <label className="label flex items-center gap-2">
-                                <Building2 className="w-4 h-4" />
+                            <label className="text-[10px] sm:text-xs font-medium text-dark-500 mb-1.5 flex items-center gap-1.5">
+                                <Building2 className="w-3 h-3" />
                                 Target Company
                             </label>
                             <input
                                 type="text"
                                 value={config.targetCompany}
                                 onChange={(e) => setConfig({ ...config, targetCompany: e.target.value })}
-                                className="input"
-                                placeholder="e.g., Google, Amazon, Meta"
+                                className="w-full bg-dark-800/50 border border-dark-700/50 rounded-md px-2.5 py-2 text-xs sm:text-sm text-white placeholder-dark-500"
+                                placeholder="e.g., Google, Amazon"
                             />
                         </div>
 
                         <div>
-                            <label className="label flex items-center gap-2">
-                                <Target className="w-4 h-4" />
+                            <label className="text-[10px] sm:text-xs font-medium text-dark-500 mb-1.5 flex items-center gap-1.5">
+                                <Target className="w-3 h-3" />
                                 Target Role
                             </label>
                             <input
                                 type="text"
                                 value={config.targetRole}
                                 onChange={(e) => setConfig({ ...config, targetRole: e.target.value })}
-                                className="input"
-                                placeholder="e.g., Senior Software Engineer"
+                                className="w-full bg-dark-800/50 border border-dark-700/50 rounded-md px-2.5 py-2 text-xs sm:text-sm text-white placeholder-dark-500"
+                                placeholder="e.g., Senior Engineer"
                             />
                         </div>
 
                         <div>
-                            <label className="label flex items-center gap-2">
-                                <HelpCircle className="w-4 h-4" />
-                                Number of Questions
+                            <label className="text-[10px] sm:text-xs font-medium text-dark-500 mb-1.5 flex items-center gap-1.5">
+                                <HelpCircle className="w-3 h-3" />
+                                Questions
                             </label>
                             <select
                                 value={config.totalQuestions}
                                 onChange={(e) => setConfig({ ...config, totalQuestions: parseInt(e.target.value) })}
-                                className="input"
+                                className="w-full bg-dark-800/50 border border-dark-700/50 rounded-md px-2.5 py-2 text-xs sm:text-sm text-white"
                             >
-                                <option value={5}>5 Questions (~15 min)</option>
-                                <option value={10}>10 Questions (~30 min)</option>
-                                <option value={15}>15 Questions (~45 min)</option>
-                                <option value={20}>20 Questions (~60 min)</option>
+                                <option value={5}>5 (~15 min)</option>
+                                <option value={10}>10 (~30 min)</option>
+                                <option value={15}>15 (~45 min)</option>
+                                <option value={20}>20 (~60 min)</option>
                             </select>
                         </div>
                     </div>
 
                     {/* Summary */}
-                    <div className="glass-card p-6 bg-primary-500/5 border-primary-500/20">
-                        <h4 className="font-medium text-white mb-4">Interview Summary</h4>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="bg-primary-500/5 border border-primary-500/20 rounded-lg p-3 sm:p-4">
+                        <h4 className="font-medium text-white text-xs sm:text-sm mb-2 sm:mb-3">Interview Summary</h4>
+                        <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-xs">
                             <div>
-                                <span className="text-dark-400">Type:</span>
-                                <span className="text-white ml-2 capitalize">{config.interviewType}</span>
+                                <span className="text-dark-500">Type:</span>
+                                <span className="text-white ml-1 capitalize">{config.interviewType}</span>
                             </div>
                             <div>
-                                <span className="text-dark-400">Style:</span>
-                                <span className="text-white ml-2 capitalize">{config.personality}</span>
+                                <span className="text-dark-500">Style:</span>
+                                <span className="text-white ml-1 capitalize">{config.personality}</span>
                             </div>
                             <div>
-                                <span className="text-dark-400">Difficulty:</span>
-                                <span className="text-white ml-2 capitalize">{config.difficulty}</span>
+                                <span className="text-dark-500">Difficulty:</span>
+                                <span className="text-white ml-1 capitalize">{config.difficulty}</span>
                             </div>
                             <div>
-                                <span className="text-dark-400">Voice:</span>
-                                <span className="text-white ml-2">{config.voiceEnabled ? 'Enabled' : 'Disabled'}</span>
+                                <span className="text-dark-500">Voice:</span>
+                                <span className="text-white ml-1">{config.voiceEnabled ? 'On' : 'Off'}</span>
                             </div>
                             <div>
-                                <span className="text-dark-400">Questions:</span>
-                                <span className="text-white ml-2">{config.totalQuestions}</span>
+                                <span className="text-dark-500">Questions:</span>
+                                <span className="text-white ml-1">{config.totalQuestions}</span>
                             </div>
                             {config.targetCompany && (
                                 <div>
-                                    <span className="text-dark-400">Company:</span>
-                                    <span className="text-white ml-2">{config.targetCompany}</span>
+                                    <span className="text-dark-500">Company:</span>
+                                    <span className="text-white ml-1">{config.targetCompany}</span>
                                 </div>
                             )}
                         </div>
@@ -381,10 +383,10 @@ export default function NewInterview() {
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-8">
+            <div className="flex items-center justify-between mt-5 sm:mt-6">
                 {step > 1 ? (
-                    <button onClick={handleBack} className="btn-ghost">
-                        <ArrowLeft className="w-5 h-5" />
+                    <button onClick={handleBack} className="text-dark-400 hover:text-white text-xs sm:text-sm font-medium px-3 py-2 flex items-center gap-1 transition-colors">
+                        <ArrowLeft className="w-3.5 h-3.5" />
                         Back
                     </button>
                 ) : (
@@ -394,19 +396,19 @@ export default function NewInterview() {
                 <button
                     onClick={handleNext}
                     disabled={startMutation.isPending}
-                    className="btn-primary"
+                    className="bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm font-medium px-4 sm:px-5 py-2 rounded-lg flex items-center gap-1.5 shadow-lg shadow-primary-500/20 transition-all disabled:opacity-50"
                 >
                     {startMutation.isPending ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : step < 3 ? (
                         <>
                             Next
-                            <ArrowRight className="w-5 h-5" />
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </>
                     ) : (
                         <>
-                            Start Interview
-                            <ArrowRight className="w-5 h-5" />
+                            Start
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </>
                     )}
                 </button>

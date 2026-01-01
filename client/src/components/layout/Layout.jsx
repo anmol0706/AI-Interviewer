@@ -137,23 +137,23 @@ export default function Layout() {
             </motion.aside>
 
             {/* Mobile Header */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800 z-50 flex items-center justify-between px-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-white" />
+            <div className="lg:hidden fixed top-0 left-0 right-0 h-12 bg-dark-950/90 backdrop-blur-xl border-b border-dark-800/30 z-50 flex items-center justify-between px-3 safe-area-padding">
+                <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
+                        <Sparkles className="w-3.5 h-3.5 text-white" />
                     </div>
-                    <span className="font-display font-bold gradient-text">
+                    <span className="font-display font-bold text-sm gradient-text tracking-tight">
                         AI Interviewer
                     </span>
                 </div>
                 <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                    className="p-2 rounded-lg hover:bg-dark-800"
+                    className="p-1.5 rounded-lg hover:bg-dark-800 active:bg-dark-700 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 >
                     {mobileMenuOpen ? (
-                        <X className="w-6 h-6 text-white" />
+                        <X className="w-5 h-5 text-white" />
                     ) : (
-                        <Menu className="w-6 h-6 text-white" />
+                        <Menu className="w-5 h-5 text-white" />
                     )}
                 </button>
             </div>
@@ -174,31 +174,32 @@ export default function Layout() {
                 initial={{ x: '100%' }}
                 animate={{ x: mobileMenuOpen ? 0 : '100%' }}
                 transition={{ type: 'spring', damping: 20 }}
-                className="lg:hidden fixed right-0 top-0 bottom-0 w-72 bg-dark-900 border-l border-dark-800 z-50 pt-20"
+                className="lg:hidden fixed right-0 top-0 bottom-0 w-[75%] max-w-[260px] bg-dark-900/95 backdrop-blur-xl border-l border-dark-800/50 z-50 pt-14 safe-area-padding"
             >
-                <nav className="px-4 py-6 space-y-2">
+                <nav className="px-3 py-3 space-y-1">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.path}
                             to={item.path}
                             onClick={() => setMobileMenuOpen(false)}
                             className={({ isActive }) =>
-                                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
-                                    ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                `flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all ${isActive
+                                    ? 'bg-primary-500/15 text-primary-400'
                                     : 'text-dark-400 hover:text-white hover:bg-dark-800'
                                 }`
                             }
                         >
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.label}</span>
+                            <item.icon className="w-4 h-4" />
+                            <span className="font-medium text-sm">{item.label}</span>
                         </NavLink>
                     ))}
+
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error-500 hover:bg-error-500/10 transition-all"
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-error-500 hover:bg-error-500/10 transition-all mt-3"
                     >
-                        <LogOut className="w-5 h-5" />
-                        <span className="font-medium">Logout</span>
+                        <LogOut className="w-4 h-4" />
+                        <span className="font-medium text-sm">Logout</span>
                     </button>
                 </nav>
             </motion.div>
@@ -206,9 +207,9 @@ export default function Layout() {
             {/* Main Content */}
             <main
                 className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[280px]'
-                    } pt-16 lg:pt-0`}
+                    } pt-12 lg:pt-0`}
             >
-                <div className="min-h-screen p-4 lg:p-8">
+                <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8 safe-area-padding">
                     <Outlet />
                 </div>
             </main>

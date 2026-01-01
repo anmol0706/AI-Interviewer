@@ -26,6 +26,7 @@ export const useInterviewStore = create((set, get) => ({
     // Socket connection
     socket: null,
     isConnected: false,
+    sessionError: null,
 
     // Audio recording
     mediaRecorder: null,
@@ -57,6 +58,11 @@ export const useInterviewStore = create((set, get) => ({
 
         socket.on('error', (error) => {
             console.error('Socket error:', error);
+            // Set error state so components can handle it
+            set({
+                sessionError: error.message || 'An error occurred',
+                isProcessing: false
+            });
         });
 
         // Interview events
@@ -274,6 +280,7 @@ export const useInterviewStore = create((set, get) => ({
             isInterviewActive: false,
             isPaused: false,
             sessionCompleted: false,
+            sessionError: null,
             responses: [],
             currentAnswer: '',
             lastEvaluation: null,

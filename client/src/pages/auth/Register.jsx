@@ -60,9 +60,9 @@ export default function Register() {
                 <p className="text-dark-400">Start your AI-powered interview practice</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Name Row */}
-                <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+                {/* Name Row - Stack on mobile, side by side on tablet+ */}
+                <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label htmlFor="firstName" className="label">First Name</label>
                         <div className="relative">

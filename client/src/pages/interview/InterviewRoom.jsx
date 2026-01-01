@@ -40,6 +40,7 @@ export default function InterviewRoom() {
         lastEvaluation,
         voiceAnalysis,
         sessionCompleted,
+        sessionError,
         setCurrentAnswer,
         startRecording,
         stopRecording,
@@ -80,6 +81,14 @@ export default function InterviewRoom() {
             navigate(`/interview/${session.sessionId}/report`);
         }
     }, [sessionCompleted, session, navigate]);
+
+    // Handle session errors (e.g., session not found)
+    useEffect(() => {
+        if (sessionError) {
+            toast.error(sessionError);
+            navigate('/dashboard');
+        }
+    }, [sessionError, navigate]);
 
     // Timer countdown
     useEffect(() => {
@@ -173,8 +182,8 @@ export default function InterviewRoom() {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 className="w-12 h-12 animate-spin text-primary-500 mx-auto mb-4" />
-                    <p className="text-dark-400">Loading interview session...</p>
+                    <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-3" />
+                    <p className="text-dark-400 text-xs sm:text-sm">Loading interview...</p>
                 </div>
             </div>
         );
@@ -183,47 +192,43 @@ export default function InterviewRoom() {
     return (
         <div className="max-w-4xl mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <span className="badge-primary capitalize">{session?.interviewType}</span>
-                        <span className="badge-secondary capitalize">{session?.difficulty}</span>
-                    </div>
-                    <div className="text-dark-400 text-sm">
-                        Question {questionIndex + 1} of {totalQuestions}
-                    </div>
+            <div className="flex items-center justify-between gap-2 mb-3 sm:mb-5">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-full bg-primary-500/15 text-primary-400 text-[10px] sm:text-xs font-medium capitalize">{session?.interviewType}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-dark-800 text-dark-400 text-[10px] sm:text-xs capitalize">{session?.difficulty}</span>
+                    <span className="text-dark-500 text-[10px] sm:text-xs">Q{questionIndex + 1}/{totalQuestions}</span>
                 </div>
 
-                <div className="flex items-center gap-4">
+                {/* Controls */}
+                <div className="flex items-center gap-1.5 sm:gap-2">
                     {/* Timer */}
-                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${timer <= 30 ? 'bg-error-500/20 text-error-400' : 'bg-dark-800 text-dark-300'
-                        }`}>
-                        <Clock className="w-5 h-5" />
-                        <span className="font-mono text-lg">{formatTime(timer)}</span>
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] sm:text-xs font-mono ${timer <= 30 ? 'bg-error-500/20 text-error-400' : 'bg-dark-800/80 text-dark-400'}`}>
+                        <Clock className="w-3 h-3" />
+                        <span>{formatTime(timer)}</span>
                     </div>
 
                     {/* Pause/Resume */}
                     <button
                         onClick={isPaused ? resumeInterview : pauseInterview}
-                        className="btn-ghost"
+                        className="p-1.5 rounded-md bg-dark-800/50 text-dark-400 hover:bg-dark-700 transition-colors"
                     >
-                        {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                        {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                     </button>
 
                     {/* End Interview */}
                     <button
                         onClick={handleEndInterview}
-                        className="btn-danger"
+                        className="px-2 py-1.5 rounded-md bg-error-500/20 text-error-400 hover:bg-error-500/30 text-[10px] sm:text-xs font-medium flex items-center gap-1 transition-colors"
                         disabled={endMutation.isPending}
                     >
-                        <StopCircle className="w-5 h-5" />
-                        End
+                        <StopCircle className="w-3 h-3" />
+                        <span className="hidden sm:inline">End</span>
                     </button>
                 </div>
             </div>
 
             {/* Progress Bar */}
-            <div className="h-2 bg-dark-800 rounded-full mb-8 overflow-hidden">
+            <div className="h-1 bg-dark-800/50 rounded-full mb-4 sm:mb-6 overflow-hidden">
                 <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${((questionIndex) / totalQuestions) * 100}%` }}
@@ -234,32 +239,32 @@ export default function InterviewRoom() {
             {/* Question Card */}
             <motion.div
                 key={questionIndex}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-8 mb-6"
+                className="bg-dark-900/80 backdrop-blur-sm rounded-lg border border-dark-800/50 p-3 sm:p-4 mb-3 sm:mb-4"
             >
-                <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0">
-                        <Brain className="w-6 h-6 text-primary-400" />
+                <div className="flex items-start gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-500/15 flex items-center justify-center flex-shrink-0">
+                        <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-primary-400" />
                     </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="text-sm text-primary-400 font-medium">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1.5 sm:mb-2 flex-wrap">
+                            <span className="text-[10px] sm:text-xs text-primary-400 font-medium">
                                 AI Interviewer
                             </span>
                             {currentQuestion?.difficulty && (
-                                <span className="badge-secondary text-xs capitalize">
+                                <span className="px-1.5 py-0.5 rounded bg-dark-800/80 text-dark-400 text-[9px] sm:text-xs capitalize">
                                     {currentQuestion.difficulty}
                                 </span>
                             )}
                         </div>
-                        <p className="text-xl text-white leading-relaxed">
+                        <p className="text-xs sm:text-sm md:text-base text-white leading-relaxed">
                             {currentQuestion?.question || currentQuestion?.questionText}
                         </p>
                         {currentQuestion?.expectedTopics?.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-4">
+                            <div className="flex flex-wrap gap-1 mt-2 sm:mt-3">
                                 {currentQuestion.expectedTopics.map((topic, i) => (
-                                    <span key={i} className="px-2 py-1 bg-dark-800/50 rounded text-xs text-dark-400">
+                                    <span key={i} className="px-1.5 py-0.5 bg-dark-800/50 rounded text-[9px] sm:text-xs text-dark-500">
                                         {topic}
                                     </span>
                                 ))}
@@ -272,31 +277,31 @@ export default function InterviewRoom() {
             {/* Answer Section */}
             <AnimatePresence mode="wait">
                 {showFeedback && lastEvaluation ? (
-                    /* Feedback Card */
+                    /* Feedback Card - Mobile responsive */
                     <motion.div
                         key="feedback"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="glass-card p-8"
+                        className="glass-card p-4 sm:p-6 md:p-8"
                     >
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-semibold text-white flex items-center gap-2">
-                                <CheckCircle className="w-6 h-6 text-success-400" />
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                            <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
+                                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-success-400" />
                                 Answer Feedback
                             </h3>
-                            <div className={`text-3xl font-bold ${getScoreColor(lastEvaluation.scores?.overall?.score || lastEvaluation.scores?.overall || 0)}`}>
+                            <div className={`text-2xl sm:text-3xl font-bold ${getScoreColor(lastEvaluation.scores?.overall?.score || lastEvaluation.scores?.overall || 0)}`}>
                                 {lastEvaluation.scores?.overall?.score || lastEvaluation.scores?.overall || 0}%
                             </div>
                         </div>
 
-                        {/* Score Breakdown */}
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        {/* Score Breakdown - 2 cols mobile, 5 cols desktop */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
                             {['correctness', 'reasoning', 'communication', 'structure', 'confidence'].map((metric) => {
                                 const score = lastEvaluation.scores?.[metric]?.score || 0;
                                 return (
                                     <div key={metric} className="text-center">
-                                        <div className={`text-2xl font-bold ${getScoreColor(score)}`}>
+                                        <div className={`text-lg sm:text-xl md:text-2xl font-bold ${getScoreColor(score)}`}>
                                             {score}%
                                         </div>
                                         <div className="text-dark-400 text-xs capitalize">{metric}</div>
@@ -305,8 +310,8 @@ export default function InterviewRoom() {
                             })}
                         </div>
 
-                        {/* Strengths & Weaknesses */}
-                        <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        {/* Strengths & Weaknesses - Stack on mobile */}
+                        <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 mb-4 sm:mb-6">
                             {lastEvaluation.strengths?.length > 0 && (
                                 <div>
                                     <h4 className="text-sm font-medium text-success-400 mb-2">Strengths</h4>
@@ -335,29 +340,29 @@ export default function InterviewRoom() {
                             )}
                         </div>
 
-                        {/* Voice Analysis */}
+                        {/* Voice Analysis - 2 cols mobile, 4 cols desktop */}
                         {voiceAnalysis && (
-                            <div className="p-4 bg-dark-800/50 rounded-xl mb-6">
-                                <h4 className="text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
-                                    <Volume2 className="w-4 h-4" />
+                            <div className="p-3 sm:p-4 bg-dark-800/50 rounded-xl mb-4 sm:mb-6">
+                                <h4 className="text-xs sm:text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
+                                    <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Voice Analysis
                                 </h4>
-                                <div className="grid grid-cols-4 gap-4 text-center text-sm">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center text-sm">
                                     <div>
-                                        <div className="text-lg font-semibold text-white">{voiceAnalysis.confidence}%</div>
-                                        <div className="text-dark-400">Confidence</div>
+                                        <div className="text-base sm:text-lg font-semibold text-white">{voiceAnalysis.confidence}%</div>
+                                        <div className="text-dark-400 text-xs">Confidence</div>
                                     </div>
                                     <div>
-                                        <div className="text-lg font-semibold text-white">{voiceAnalysis.clarityScore}%</div>
-                                        <div className="text-dark-400">Clarity</div>
+                                        <div className="text-base sm:text-lg font-semibold text-white">{voiceAnalysis.clarityScore}%</div>
+                                        <div className="text-dark-400 text-xs">Clarity</div>
                                     </div>
                                     <div>
-                                        <div className="text-lg font-semibold text-white">{voiceAnalysis.wordsPerMinute}</div>
-                                        <div className="text-dark-400">WPM</div>
+                                        <div className="text-base sm:text-lg font-semibold text-white">{voiceAnalysis.wordsPerMinute}</div>
+                                        <div className="text-dark-400 text-xs">WPM</div>
                                     </div>
                                     <div>
-                                        <div className="text-lg font-semibold text-white">{voiceAnalysis.hesitationCount}</div>
-                                        <div className="text-dark-400">Hesitations</div>
+                                        <div className="text-base sm:text-lg font-semibold text-white">{voiceAnalysis.hesitationCount}</div>
+                                        <div className="text-dark-400 text-xs">Hesitations</div>
                                     </div>
                                 </div>
                             </div>
@@ -367,10 +372,11 @@ export default function InterviewRoom() {
                         <div className="flex justify-center">
                             <button
                                 onClick={handleContinue}
-                                className="btn-primary"
+                                className="btn-primary w-full sm:w-auto"
                             >
-                                Continue to Next Question
-                                <ChevronRight className="w-5 h-5" />
+                                <span className="hidden sm:inline">Continue to Next Question</span>
+                                <span className="sm:hidden">Next Question</span>
+                                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                         </div>
                     </motion.div>
@@ -378,24 +384,24 @@ export default function InterviewRoom() {
                     /* Answer Input */
                     <motion.div
                         key="answer"
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="glass-card p-6"
+                        exit={{ opacity: 0, y: -15 }}
+                        className="bg-dark-900/80 backdrop-blur-sm rounded-lg border border-dark-800/50 p-3 sm:p-4"
                     >
                         {/* Voice Recording Indicator */}
                         {isRecording && (
-                            <div className="flex items-center gap-3 mb-4 p-4 bg-error-500/20 rounded-xl">
-                                <div className="w-3 h-3 bg-error-500 rounded-full animate-pulse" />
-                                <span className="text-error-400 font-medium">Recording in progress...</span>
+                            <div className="flex items-center gap-2 mb-3 p-2.5 bg-error-500/15 rounded-lg">
+                                <div className="w-2 h-2 bg-error-500 rounded-full animate-pulse" />
+                                <span className="text-error-400 text-xs font-medium">Recording...</span>
                             </div>
                         )}
 
                         {/* Transcription Preview */}
                         {voiceAnalysis?.transcription && (
-                            <div className="mb-4 p-4 bg-dark-800/50 rounded-xl">
-                                <p className="text-sm text-dark-400 mb-1">Transcription:</p>
-                                <p className="text-white">{voiceAnalysis.transcription}</p>
+                            <div className="mb-3 p-2.5 bg-dark-800/50 rounded-lg">
+                                <p className="text-[10px] text-dark-500 mb-0.5">Transcription:</p>
+                                <p className="text-white text-xs sm:text-sm">{voiceAnalysis.transcription}</p>
                             </div>
                         )}
 
@@ -405,24 +411,24 @@ export default function InterviewRoom() {
                             value={currentAnswer}
                             onChange={(e) => setCurrentAnswer(e.target.value)}
                             placeholder="Type your answer here or use the microphone..."
-                            className="input min-h-[200px] resize-none mb-4"
+                            className="w-full bg-dark-800/50 border border-dark-700/50 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-white placeholder-dark-500 min-h-[120px] sm:min-h-[150px] resize-none mb-3 focus:outline-none focus:border-primary-500/50"
                             disabled={isRecording || isPaused || isProcessing}
                         />
 
                         {/* Action Buttons */}
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 {/* Voice Button */}
                                 {session?.voiceEnabled && (
                                     <button
                                         onClick={handleRecordToggle}
                                         disabled={isPaused || isProcessing}
-                                        className={`p-3 rounded-xl transition-all ${isRecording
+                                        className={`p-2 rounded-lg transition-all ${isRecording
                                             ? 'bg-error-500 text-white animate-pulse'
-                                            : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
+                                            : 'bg-dark-800/50 text-dark-400 hover:bg-dark-700'
                                             }`}
                                     >
-                                        {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                                        {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                                     </button>
                                 )}
                             </div>
@@ -431,17 +437,17 @@ export default function InterviewRoom() {
                             <button
                                 onClick={handleSubmit}
                                 disabled={(!currentAnswer.trim() && !voiceAnalysis?.transcription) || isProcessing || isPaused}
-                                className="btn-primary"
+                                className="bg-primary-500 hover:bg-primary-600 text-white text-xs font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 shadow-lg shadow-primary-500/20 transition-all disabled:opacity-50"
                             >
                                 {isProcessing ? (
                                     <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Processing...
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span className="hidden sm:inline">Processing</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Send className="w-5 h-5" />
-                                        Submit Answer
+                                        <Send className="w-3.5 h-3.5" />
+                                        Submit
                                     </>
                                 )}
                             </button>
@@ -452,14 +458,14 @@ export default function InterviewRoom() {
 
             {/* Paused Overlay */}
             {isPaused && (
-                <div className="fixed inset-0 bg-dark-950/90 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-dark-950/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="text-center">
-                        <Pause className="w-16 h-16 text-primary-400 mx-auto mb-4" />
-                        <h2 className="text-2xl font-bold text-white mb-2">Interview Paused</h2>
-                        <p className="text-dark-400 mb-6">Take your time. Click resume when ready.</p>
-                        <button onClick={resumeInterview} className="btn-primary">
-                            <Play className="w-5 h-5" />
-                            Resume Interview
+                        <Pause className="w-10 h-10 sm:w-12 sm:h-12 text-primary-400 mx-auto mb-3" />
+                        <h2 className="text-lg sm:text-xl font-bold text-white mb-1">Interview Paused</h2>
+                        <p className="text-dark-400 text-xs sm:text-sm mb-4">Take your time. Click resume when ready.</p>
+                        <button onClick={resumeInterview} className="bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 mx-auto transition-all">
+                            <Play className="w-4 h-4" />
+                            Resume
                         </button>
                     </div>
                 </div>

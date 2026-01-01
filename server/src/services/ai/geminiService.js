@@ -56,9 +56,12 @@ class GeminiService {
     }
 
     /**
-     * Send a message in an existing chat session
+     * Send a message in an existing chat session with retry logic
      */
-    async sendChatMessage(sessionId, message) {
+    async sendChatMessage(sessionId, message, retryCount = 0) {
+        const maxRetries = 3;
+        const baseDelay = 2000; // 2 seconds
+
         let session = this.chatSessions.get(sessionId);
 
         // Auto-create session if it doesn't exist (e.g., after server restart)
@@ -79,21 +82,38 @@ class GeminiService {
             parts: [{ text: message }]
         });
 
-        // Make API call with full history
-        const response = await this.ai.models.generateContent({
-            model: this.modelName,
-            contents: session.history,
-        });
+        try {
+            // Make API call with full history
+            const response = await this.ai.models.generateContent({
+                model: this.modelName,
+                contents: session.history,
+            });
 
-        const responseText = response.text;
+            const responseText = response.text;
 
-        // Add model response to history
-        session.history.push({
-            role: 'model',
-            parts: [{ text: responseText }]
-        });
+            // Add model response to history
+            session.history.push({
+                role: 'model',
+                parts: [{ text: responseText }]
+            });
 
-        return responseText;
+            return responseText;
+        } catch (error) {
+            // Remove the failed message from history
+            session.history.pop();
+
+            // Check if it's a rate limit error (429)
+            if (error.status === 429 || error.message?.includes('429') || error.message?.includes('quota')) {
+                if (retryCount < maxRetries) {
+                    const delay = baseDelay * Math.pow(2, retryCount);
+                    logger.warn(`Rate limited, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this.sendChatMessage(sessionId, message, retryCount + 1);
+                }
+                throw new Error('API rate limit exceeded. Please try again in a few minutes.');
+            }
+            throw error;
+        }
     }
 
     /**
@@ -142,10 +162,13 @@ Always respond in valid JSON format with the following structure:
      * Generate the next interview question
      */
     async generateQuestion(sessionId, context, previousResponses = []) {
-        try {
-            this.getOrCreateSession(sessionId, context);
+        if (!this.ai) {
+            throw new Error('Gemini AI not initialized. Please check your API key.');
+        }
 
-            let prompt = `Generate the next interview question.
+        this.getOrCreateSession(sessionId, context);
+
+        let prompt = `Generate the next interview question.
 
 Current State:
 - Questions asked: ${previousResponses.length}
@@ -161,25 +184,19 @@ Generate a ${context.difficulty} difficulty question for a ${context.interviewTy
 Focus on topics not yet covered.
 Respond in JSON format.`;
 
-            const text = await this.sendChatMessage(sessionId, prompt);
-            return this.parseAIResponse(text);
-        } catch (error) {
-            logger.error('Error generating question:', error);
-            return this.getFallbackQuestion(context);
-        }
+        const text = await this.sendChatMessage(sessionId, prompt);
+        return this.parseAIResponse(text);
     }
 
     /**
      * Evaluate a candidate's answer
      */
     async evaluateAnswer(sessionId, question, answer, voiceAnalysis = null) {
-        try {
-            if (!this.ai) {
-                logger.warn('Gemini AI not initialized, using fallback evaluation');
-                return this.getFallbackEvaluation();
-            }
+        if (!this.ai) {
+            throw new Error('Gemini AI not initialized. Please check your API key.');
+        }
 
-            const evaluationPrompt = `Evaluate this interview response:
+        const evaluationPrompt = `Evaluate this interview response:
 
 QUESTION: ${question.questionText || question}
 DIFFICULTY: ${question.difficulty || 'medium'}
@@ -216,24 +233,20 @@ Provide a comprehensive evaluation in JSON format:
   "adjustDifficulty": "increase|decrease|maintain"
 }`;
 
-            let text;
-            // Try to use existing session for context, or make direct call
-            if (this.chatSessions.has(sessionId)) {
-                text = await this.sendChatMessage(sessionId, evaluationPrompt);
-            } else {
-                // No session - make a direct call to the model
-                const response = await this.ai.models.generateContent({
-                    model: this.modelName,
-                    contents: evaluationPrompt,
-                });
-                text = response.text;
-            }
-
-            return this.parseAIResponse(text);
-        } catch (error) {
-            logger.error('Error evaluating answer:', error);
-            return this.getFallbackEvaluation();
+        let text;
+        // Try to use existing session for context, or make direct call
+        if (this.chatSessions.has(sessionId)) {
+            text = await this.sendChatMessage(sessionId, evaluationPrompt);
+        } else {
+            // No session - make a direct call to the model with proper format
+            const response = await this.ai.models.generateContent({
+                model: this.modelName,
+                contents: [{ role: 'user', parts: [{ text: evaluationPrompt }] }],
+            });
+            text = response.text;
         }
+
+        return this.parseAIResponse(text);
     }
 
     /**
@@ -267,7 +280,7 @@ Respond in JSON format with a "question" field.`;
             } else {
                 const response = await this.ai.models.generateContent({
                     model: this.modelName,
-                    contents: followUpPrompt,
+                    contents: [{ role: 'user', parts: [{ text: followUpPrompt }] }],
                 });
                 text = response.text;
             }
@@ -283,12 +296,11 @@ Respond in JSON format with a "question" field.`;
      * Generate comprehensive interview summary and improvement plan
      */
     async generateInterviewSummary(sessionId, interviewData) {
-        try {
-            if (!this.ai) {
-                return this.getFallbackSummary(interviewData);
-            }
+        if (!this.ai) {
+            throw new Error('Gemini AI not initialized. Please check your API key.');
+        }
 
-            const summaryPrompt = `Generate a comprehensive interview summary and improvement plan.
+        const summaryPrompt = `Generate a comprehensive interview summary and improvement plan.
 
 INTERVIEW DATA:
 - Type: ${interviewData.interviewType}
@@ -349,26 +361,22 @@ Generate a detailed summary in JSON format:
   "recommendedNextSteps": ["step1", "step2", "step3"]
 }`;
 
-            let text;
-            // Try to use existing session, or make direct call
-            if (this.chatSessions.has(sessionId)) {
-                text = await this.sendChatMessage(sessionId, summaryPrompt);
-            } else {
-                const response = await this.ai.models.generateContent({
-                    model: this.modelName,
-                    contents: summaryPrompt,
-                });
-                text = response.text;
-            }
-
-            // Clean up session after summary
-            this.chatSessions.delete(sessionId);
-
-            return this.parseAIResponse(text);
-        } catch (error) {
-            logger.error('Error generating summary:', error);
-            return this.getFallbackSummary(interviewData);
+        let text;
+        // Try to use existing session, or make direct call
+        if (this.chatSessions.has(sessionId)) {
+            text = await this.sendChatMessage(sessionId, summaryPrompt);
+        } else {
+            const response = await this.ai.models.generateContent({
+                model: this.modelName,
+                contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }],
+            });
+            text = response.text;
         }
+
+        // Clean up session after summary
+        this.chatSessions.delete(sessionId);
+
+        return this.parseAIResponse(text);
     }
 
     /**
@@ -426,170 +434,6 @@ Generate a detailed summary in JSON format:
             logger.warn('Failed to parse AI response as JSON:', error.message);
             return { content: text, type: 'text' };
         }
-    }
-
-    /**
-     * Fallback question when AI fails
-     */
-    getFallbackQuestion(context) {
-        const fallbacks = {
-            technical: [
-                {
-                    questionType: 'technical',
-                    questionText: 'Can you explain the concept of time complexity and give an example of O(n log n) algorithm?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['time complexity', 'big O notation', 'algorithms']
-                },
-                {
-                    questionType: 'technical',
-                    questionText: 'Explain the difference between SQL and NoSQL databases. When would you choose one over the other?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['databases', 'SQL', 'NoSQL', 'data modeling']
-                },
-                {
-                    questionType: 'technical',
-                    questionText: 'What is the difference between a stack and a queue? Can you give a real-world example of each?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['data structures', 'stack', 'queue', 'LIFO', 'FIFO']
-                },
-                {
-                    questionType: 'technical',
-                    questionText: 'Explain what REST API is and what makes an API RESTful?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['REST', 'API design', 'HTTP methods', 'statelessness']
-                },
-                {
-                    questionType: 'technical',
-                    questionText: 'What is a closure in JavaScript and why is it useful?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['closures', 'JavaScript', 'scope', 'functions']
-                }
-            ],
-            behavioral: [
-                {
-                    questionType: 'scenario',
-                    questionText: 'Tell me about a time when you had to deal with a difficult team member. How did you handle it?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['conflict resolution', 'teamwork', 'communication']
-                },
-                {
-                    questionType: 'scenario',
-                    questionText: 'Describe a situation where you had to meet a tight deadline. How did you manage your time?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['time management', 'prioritization', 'stress management']
-                },
-                {
-                    questionType: 'scenario',
-                    questionText: 'Tell me about a project that failed. What did you learn from it?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['failure', 'learning', 'resilience', 'self-improvement']
-                },
-                {
-                    questionType: 'scenario',
-                    questionText: 'Describe a time when you had to learn something new quickly. How did you approach it?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['learning', 'adaptability', 'growth mindset']
-                }
-            ],
-            hr: [
-                {
-                    questionType: 'open-ended',
-                    questionText: 'What attracted you to this role and company?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['motivation', 'career goals', 'company knowledge']
-                },
-                {
-                    questionType: 'open-ended',
-                    questionText: 'Where do you see yourself in 5 years?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['career goals', 'ambition', 'planning']
-                },
-                {
-                    questionType: 'open-ended',
-                    questionText: 'What is your greatest strength and how does it help you at work?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['self-awareness', 'strengths', 'value proposition']
-                },
-                {
-                    questionType: 'open-ended',
-                    questionText: 'Why are you looking to leave your current role?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['motivation', 'career change', 'honesty']
-                }
-            ],
-            'system-design': [
-                {
-                    questionType: 'technical',
-                    questionText: 'How would you design a URL shortening service like bit.ly?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['system design', 'scalability', 'database design']
-                },
-                {
-                    questionType: 'technical',
-                    questionText: 'Design a simple chat application. What components would you need?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['real-time', 'websockets', 'message queue', 'database']
-                },
-                {
-                    questionType: 'technical',
-                    questionText: 'How would you design a rate limiter for an API?',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['rate limiting', 'algorithms', 'distributed systems']
-                },
-                {
-                    questionType: 'technical',
-                    questionText: 'Design a notification system that can handle millions of users.',
-                    difficulty: context.difficulty || 'medium',
-                    expectedTopics: ['scalability', 'push notifications', 'queues', 'microservices']
-                }
-            ]
-        };
-
-        const questions = fallbacks[context.interviewType] || fallbacks.technical;
-        // Return a random question from the array
-        return questions[Math.floor(Math.random() * questions.length)];
-    }
-
-    /**
-     * Fallback evaluation when AI fails
-     */
-    getFallbackEvaluation() {
-        return {
-            scores: {
-                correctness: { score: 70, feedback: 'Evaluation in progress' },
-                reasoning: { score: 70, feedback: 'Evaluation in progress' },
-                communication: { score: 70, feedback: 'Evaluation in progress' },
-                structure: { score: 70, feedback: 'Evaluation in progress' },
-                confidence: { score: 70, feedback: 'Evaluation in progress' }
-            },
-            overall: 70,
-            strengths: ['Answer provided'],
-            weaknesses: ['Could not fully evaluate'],
-            suggestions: ['Continue practicing'],
-            keyTopicsCovered: [],
-            keyTopicsMissed: [],
-            adjustDifficulty: 'maintain'
-        };
-    }
-
-    /**
-     * Fallback summary when AI fails
-     */
-    getFallbackSummary(interviewData) {
-        return {
-            overallAssessment: 'Interview completed. Full AI analysis temporarily unavailable.',
-            performanceLevel: interviewData.overallScores.overall >= 70 ? 'good' : 'average',
-            strengthAreas: ['Completed the interview'],
-            weaknessAreas: ['Areas to improve identified'],
-            improvementPlan: {
-                summary: 'Continue practicing interview questions in your weak areas.',
-                focusAreas: ['Technical skills', 'Communication'],
-                recommendedPractice: [],
-                resources: []
-            },
-            readinessScore: interviewData.overallScores.overall,
-            recommendedNextSteps: ['Review your responses', 'Practice more questions', 'Schedule another interview']
-        };
     }
 
     /**
