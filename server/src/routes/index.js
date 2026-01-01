@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './authRoutes.js';
 import interviewRoutes from './interviewRoutes.js';
 import analyticsRoutes from './analyticsRoutes.js';
+import dailyPracticeRoutes from './dailyPracticeRoutes.js';
 
 const router = express.Router();
 
@@ -19,5 +20,6 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/interviews', interviewRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/daily-practice', dailyPracticeRoutes);
 
 export default router;

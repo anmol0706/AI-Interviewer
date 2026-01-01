@@ -496,3 +496,83 @@ iframe {
     padding: 2rem;
   }
 }
+
+/* ==============================================
+   REWARD CELEBRATION ANIMATIONS
+   ============================================== */
+
+/* Bounce in animation for modal */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  70% {
+    transform: scale(0.9);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.5s ease-out forwards;
+}
+
+/* Confetti animations */
+@keyframes confetti-fall-1 {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(300px) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-fall-2 {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(350px) rotate(-540deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-fall-3 {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(280px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti-1 {
+  animation: confetti-fall-1 2s ease-in infinite;
+}
+
+.animate-confetti-2 {
+  animation: confetti-fall-2 2.5s ease-in infinite;
+  animation-delay: 0.2s;
+}
+
+.animate-confetti-3 {
+  animation: confetti-fall-3 2.2s ease-in infinite;
+  animation-delay: 0.4s;
+}

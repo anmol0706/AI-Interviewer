@@ -12,12 +12,14 @@ import {
     Menu,
     X,
     Sparkles,
-    User
+    User,
+    Flame
 } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/daily-practice', icon: Flame, label: 'Daily Practice' },
     { path: '/interview/new', icon: MessageSquarePlus, label: 'New Interview' },
     { path: '/history', icon: History, label: 'History' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },

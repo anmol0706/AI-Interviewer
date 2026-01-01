@@ -15,6 +15,7 @@ import logger from './utils/logger.js';
 import routes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/index.js';
 import { initializeSocket } from './websocket/index.js';
+import dailyScheduler from './services/dailyScheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,6 +108,9 @@ async function startServer() {
             fs.mkdirSync(logsDir, { recursive: true });
         }
 
+        // Start Daily Practice scheduler
+        dailyScheduler.start();
+
         // Start listening
         server.listen(config.port, () => {
             logger.info(`
@@ -121,6 +125,7 @@ async function startServer() {
 ║   API:          http://localhost:${config.port}/api${' '.repeat(24)}║
 ║   Health:       http://localhost:${config.port}/api/health${' '.repeat(17)}║
 ║   WebSocket:    ws://localhost:${config.port}${' '.repeat(28)}║
+║   Daily Practice: Scheduler running                           ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
       `);
@@ -138,6 +143,9 @@ async function startServer() {
 
 async function gracefulShutdown() {
     logger.info('Received shutdown signal. Closing server gracefully...');
+
+    // Stop daily scheduler
+    dailyScheduler.stop();
 
     server.close(async () => {
         logger.info('HTTP server closed');

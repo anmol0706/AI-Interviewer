@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
+import { useDailyPracticeStore } from '../stores/dailyPracticeStore';
 import { analyticsService } from '../services/interviewService';
 import {
     MessageSquarePlus,
@@ -14,7 +15,8 @@ import {
     Calendar,
     Flame,
     BarChart3,
-    Sparkles
+    Sparkles,
+    CheckCircle2
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -111,6 +113,36 @@ export default function Dashboard() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* Daily Practice Card */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-gradient-to-br from-orange-500/10 via-red-500/5 to-purple-500/10 backdrop-blur-sm rounded-xl lg:rounded-2xl p-4 sm:p-5 lg:p-6 border border-orange-500/20"
+            >
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                            <Flame className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-base sm:text-lg font-bold text-white mb-1">Daily Practice</h3>
+                            <p className="text-dark-400 text-xs sm:text-sm">
+                                Complete today's questions to maintain your streak!
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        to="/daily-practice"
+                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-sm font-medium px-5 py-2.5 rounded-xl inline-flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all"
+                    >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Start Practice
+                        <ArrowRight className="w-4 h-4" />
+                    </Link>
+                </div>
+            </motion.div>
 
             {/* Main Content Grid */}
             <div className="grid gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-3">
@@ -243,8 +275,8 @@ export default function Dashboard() {
                                             strokeDashoffset={`${2 * Math.PI * 35 * (1 - skill.score / 100)}`}
                                             strokeLinecap="round"
                                             className={`lg:stroke-[8] ${skill.score >= 80 ? 'text-success-500' :
-                                                    skill.score >= 60 ? 'text-primary-500' :
-                                                        'text-warning-500'
+                                                skill.score >= 60 ? 'text-primary-500' :
+                                                    'text-warning-500'
                                                 }`}
                                         />
                                     </svg>
