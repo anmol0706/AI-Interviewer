@@ -42,6 +42,7 @@ export default function InterviewRoom() {
         sessionCompleted,
         sessionError,
         setCurrentAnswer,
+        setVoiceAnalysis,
         startRecording,
         stopRecording,
         initSocket,
@@ -56,6 +57,9 @@ export default function InterviewRoom() {
     const [showFeedback, setShowFeedback] = useState(false);
     const hasJoinedRef = useRef(false);
 
+    // Get socket from store (subscribe to it)
+    const socket = useInterviewStore((state) => state.socket);
+
     // Initialize socket and join interview
     useEffect(() => {
         initSocket();
@@ -63,17 +67,15 @@ export default function InterviewRoom() {
         return () => {
             clearInterview();
         };
-    }, []);
+    }, [initSocket, clearInterview]);
 
     // Join interview when socket is connected
-
     useEffect(() => {
-        const { socket } = useInterviewStore.getState();
         if (sessionId && socket && isConnected && !hasJoinedRef.current) {
             hasJoinedRef.current = true;
             joinInterview(sessionId);
         }
-    }, [sessionId, isConnected, joinInterview]);
+    }, [sessionId, socket, isConnected, joinInterview]);
 
     // Redirect to report if interview is already completed
     useEffect(() => {
@@ -97,9 +99,7 @@ export default function InterviewRoom() {
         const interval = setInterval(() => {
             setTimer((prev) => {
                 if (prev <= 1) {
-                    // Auto-submit when time is up
-                    handleSubmit();
-                    return 120;
+                    return 0; // Just set to 0, don't call handleSubmit here
                 }
                 return prev - 1;
             });
@@ -107,6 +107,17 @@ export default function InterviewRoom() {
 
         return () => clearInterval(interval);
     }, [isInterviewActive, isPaused, isProcessing]);
+
+    // Auto-submit when timer reaches zero
+    useEffect(() => {
+        if (timer === 0 && isInterviewActive && !isProcessing) {
+            const answer = currentAnswer || voiceAnalysis?.transcription;
+            if (answer?.trim()) {
+                submitAnswerSocket(answer);
+            }
+            setTimer(120); // Reset timer
+        }
+    }, [timer, isInterviewActive, isProcessing, currentAnswer, voiceAnalysis, submitAnswerSocket]);
 
     // Reset timer on new question
     useEffect(() => {
@@ -163,6 +174,7 @@ export default function InterviewRoom() {
     const handleContinue = () => {
         setShowFeedback(false);
         setCurrentAnswer('');
+        setVoiceAnalysis(null);
     };
 
     const formatTime = (seconds) => {

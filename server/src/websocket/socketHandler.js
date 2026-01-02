@@ -73,6 +73,9 @@ export function initializeSocket(io) {
                 socket.emit('interview-joined', {
                     sessionId: session.sessionId,
                     status: session.status,
+                    interviewType: session.interviewType,
+                    difficulty: session.difficulty?.current || session.difficulty,
+                    voiceEnabled: session.voiceEnabled,
                     currentQuestion: session.responses[session.currentQuestionIndex]?.question,
                     progress: {
                         current: session.currentQuestionIndex + 1,

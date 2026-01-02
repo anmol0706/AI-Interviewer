@@ -28,9 +28,8 @@ export const useInterviewStore = create((set, get) => ({
     isConnected: false,
     sessionError: null,
 
-    // Audio recording
-    mediaRecorder: null,
-    audioChunks: [],
+    // Audio recording (Web Speech API)
+    speechRecognition: null,
 
     // Initialize socket connection
     initSocket: () => {
@@ -87,7 +86,9 @@ export const useInterviewStore = create((set, get) => ({
                 questionIndex: data.index,
                 totalQuestions: data.progress.total,
                 isProcessing: false,
-                currentAnswer: ''
+                currentAnswer: '',
+                voiceAnalysis: null,
+                lastEvaluation: null
             });
         });
 
@@ -188,42 +189,78 @@ export const useInterviewStore = create((set, get) => ({
         }
     },
 
-    // Start audio recording
+    // Speech recognition instance
+    speechRecognition: null,
+
+    // Start audio recording with Web Speech API
     startRecording: async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm;codecs=opus'
-            });
+            // Check for Web Speech API support
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                throw new Error('Speech recognition not supported in this browser');
+            }
 
-            const audioChunks = [];
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
 
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunks.push(event.data);
+            let finalTranscript = '';
+            let interimTranscript = '';
+            const startTime = Date.now();
 
-                    // Stream audio chunk to server
-                    const { socket, session } = get();
-                    if (socket && session) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const base64 = reader.result.split(',')[1];
-                            socket.emit('audio-stream', {
-                                sessionId: session.sessionId,
-                                audioChunk: base64
-                            });
-                        };
-                        reader.readAsDataURL(event.data);
+            recognition.onresult = (event) => {
+                interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript = transcript;
+                    }
+                }
+
+                // Update the current answer with the transcription
+                const fullTranscript = (finalTranscript + interimTranscript).trim();
+                set({
+                    currentAnswer: fullTranscript,
+                    voiceAnalysis: {
+                        transcription: fullTranscript,
+                        confidence: 85,
+                        isInterim: interimTranscript.length > 0
+                    }
+                });
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'no-speech') {
+                    // User didn't speak, just ignore
+                    return;
+                }
+                set({ isRecording: false, speechRecognition: null });
+            };
+
+            recognition.onend = () => {
+                const { isRecording } = get();
+                // Only restart if we're still supposed to be recording
+                if (isRecording && get().speechRecognition === recognition) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        // Already started or stopped, ignore
                     }
                 }
             };
 
-            mediaRecorder.start(1000); // Capture in 1-second chunks
+            recognition.start();
 
             set({
-                mediaRecorder,
-                audioChunks,
-                isRecording: true
+                speechRecognition: recognition,
+                isRecording: true,
+                currentAnswer: '',
+                voiceAnalysis: null
             });
         } catch (error) {
             console.error('Failed to start recording:', error);
@@ -233,30 +270,69 @@ export const useInterviewStore = create((set, get) => ({
 
     // Stop audio recording
     stopRecording: async () => {
-        const { mediaRecorder, socket, session } = get();
+        const { speechRecognition, currentAnswer, socket, session } = get();
 
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
+        if (speechRecognition) {
+            speechRecognition.stop();
+        }
 
-            // Stop all tracks
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        // Calculate voice analysis metrics based on the transcription
+        const words = currentAnswer.trim().split(/\s+/).filter(w => w.length > 0);
+        const wordCount = words.length;
 
-            // Notify server that audio is complete
-            if (socket && session) {
-                socket.emit('audio-complete', { sessionId: session.sessionId });
+        // Detect filler words
+        const fillerWordsList = ['um', 'uh', 'er', 'ah', 'like', 'you know', 'basically', 'actually', 'literally', 'so', 'well', 'i mean', 'kind of', 'sort of', 'right', 'okay'];
+        const fillerWords = [];
+        fillerWordsList.forEach(filler => {
+            const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+            const matches = currentAnswer.toLowerCase().match(regex);
+            if (matches && matches.length > 0) {
+                fillerWords.push({ word: filler, count: matches.length });
             }
+        });
+
+        const hesitationCount = fillerWords.reduce((sum, f) => sum + f.count, 0);
+        const clarityScore = Math.max(50, 100 - (hesitationCount * 5));
+        const wordsPerMinute = 140; // Estimated average
+
+        // Create voice analysis object
+        const voiceAnalysis = {
+            transcription: currentAnswer,
+            confidence: Math.min(95, 70 + Math.min(25, wordCount / 2)),
+            hesitationCount,
+            fillerWords,
+            clarityScore,
+            wordsPerMinute,
+            speechPatterns: {
+                speakingRate: 'normal',
+                consistency: 'consistent',
+                energy: 'moderate'
+            }
+        };
+
+        // Emit transcription to server for storage
+        if (socket && session && currentAnswer.trim()) {
+            socket.emit('transcription-complete-client', {
+                sessionId: session.sessionId,
+                voiceAnalysis
+            });
         }
 
         set({
-            mediaRecorder: null,
-            audioChunks: [],
-            isRecording: false
+            speechRecognition: null,
+            isRecording: false,
+            voiceAnalysis
         });
     },
 
     // Set current answer
     setCurrentAnswer: (answer) => {
         set({ currentAnswer: answer });
+    },
+
+    // Set/clear voice analysis
+    setVoiceAnalysis: (voiceAnalysis) => {
+        set({ voiceAnalysis });
     },
 
     // Set session data
@@ -272,6 +348,10 @@ export const useInterviewStore = create((set, get) => ({
 
     // Clear interview state
     clearInterview: () => {
+        const { speechRecognition } = get();
+        if (speechRecognition) {
+            speechRecognition.stop();
+        }
         set({
             session: null,
             currentQuestion: null,
@@ -284,7 +364,9 @@ export const useInterviewStore = create((set, get) => ({
             responses: [],
             currentAnswer: '',
             lastEvaluation: null,
-            voiceAnalysis: null
+            voiceAnalysis: null,
+            speechRecognition: null,
+            isRecording: false
         });
     },
 
