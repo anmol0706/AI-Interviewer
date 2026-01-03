@@ -13,7 +13,8 @@ import {
     X,
     Sparkles,
     User,
-    Flame
+    Flame,
+    Trophy
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,6 +24,7 @@ const navItems = [
     { path: '/interview/new', icon: MessageSquarePlus, label: 'New Interview' },
     { path: '/history', icon: History, label: 'History' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/achievements', icon: Trophy, label: 'Achievements' },
     { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 

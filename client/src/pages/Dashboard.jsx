@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
 import { useDailyPracticeStore } from '../stores/dailyPracticeStore';
 import { analyticsService } from '../services/interviewService';
+import { SkeletonDashboard } from '../components/ui/Skeleton';
+import { BadgeSummary, BADGE_DEFINITIONS } from '../components/ui/AchievementBadges';
 import {
     MessageSquarePlus,
     TrendingUp,
@@ -16,11 +18,13 @@ import {
     Flame,
     BarChart3,
     Sparkles,
-    CheckCircle2
+    CheckCircle2,
+    Trophy
 } from 'lucide-react';
 
 export default function Dashboard() {
     const { user } = useAuthStore();
+    const navigate = useNavigate();
 
     const { data: analytics, isLoading } = useQuery({
         queryKey: ['dashboard-analytics'],
@@ -28,6 +32,33 @@ export default function Dashboard() {
     });
 
     const dashboardData = analytics?.data;
+
+    // Calculate unlocked badges
+    const calculateUnlockedBadges = () => {
+        const overview = dashboardData?.overview || {};
+        const unlocked = [];
+
+        if (overview.totalInterviews >= 1) unlocked.push('first_interview');
+        if (overview.totalInterviews >= 10) unlocked.push('interview_10');
+        if (overview.totalInterviews >= 25) unlocked.push('interview_25');
+        if (overview.totalInterviews >= 50) unlocked.push('interview_50');
+
+        const longestStreak = overview.longestStreak || overview.currentStreak || 0;
+        if (longestStreak >= 3) unlocked.push('streak_3');
+        if (longestStreak >= 7) unlocked.push('streak_7');
+        if (longestStreak >= 14) unlocked.push('streak_14');
+
+        if (overview.averageScore >= 80) unlocked.push('consistent');
+        if ((dashboardData?.recentInterviews?.filter(i => i.score >= 90).length || 0) >= 5) unlocked.push('high_scorer');
+
+        const dailyDaysCompleted = user?.statistics?.streakDays || 0;
+        if (dailyDaysCompleted >= 1) unlocked.push('daily_first');
+        if (dailyDaysCompleted >= 7) unlocked.push('daily_7');
+
+        return unlocked;
+    };
+
+    const unlockedBadgeIds = calculateUnlockedBadges();
 
     const getScoreColor = (score) => {
         if (score >= 85) return 'text-success-400';
@@ -45,6 +76,11 @@ export default function Dashboard() {
         };
         return badges[level] || badges.average;
     };
+
+    // Show skeleton while loading
+    if (isLoading) {
+        return <SkeletonDashboard />;
+    }
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-8">
@@ -290,6 +326,17 @@ export default function Dashboard() {
                     </div>
                 </motion.div>
             )}
+
+            {/* Achievements Summary */}
+            <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+            >
+                <BadgeSummary
+                    unlockedBadgeIds={unlockedBadgeIds}
+                    onViewAll={() => navigate('/achievements')}
+                />
+            </motion.div>
 
             {/* Subscription Banner for Free Users */}
             {user?.subscription?.plan === 'free' && (

@@ -15,6 +15,7 @@ import History from './pages/History';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import DailyPractice from './pages/DailyPractice';
+import Achievements from './pages/Achievements';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -93,6 +94,7 @@ function App() {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/daily-practice" element={<DailyPractice />} />
+                <Route path="/achievements" element={<Achievements />} />
             </Route>
 
             {/* 404 */}

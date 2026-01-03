@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDailyPracticeStore } from '../stores/dailyPracticeStore';
 import { useAuthStore } from '../stores/authStore';
+import { SkeletonDailyPractice } from '../components/ui/Skeleton';
 
 // Icons as SVG components
 const FireIcon = () => (
@@ -161,14 +162,7 @@ function DailyPractice() {
     const overallProgress = getOverallProgress();
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-dark-400 text-lg">Loading daily practice...</p>
-                </div>
-            </div>
-        );
+        return <SkeletonDailyPractice />;
     }
 
     if (error) {
