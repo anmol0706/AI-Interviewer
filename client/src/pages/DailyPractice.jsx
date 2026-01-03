@@ -190,48 +190,48 @@ function DailyPractice() {
     }
 
     return (
-        <div className="min-h-screen py-6 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen py-3 sm:py-6 px-2 sm:px-6 lg:px-8">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
+                <div className="mb-4 sm:mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl sm:text-3xl font-bold gradient-text">
+                            <h1 className="text-lg sm:text-3xl font-bold gradient-text leading-tight">
                                 Daily Practice
                             </h1>
-                            <p className="text-dark-400 mt-1">
+                            <p className="text-[10px] sm:text-base text-dark-400 mt-0.5">
                                 {new Date().toLocaleDateString('en-US', {
-                                    weekday: 'long',
+                                    weekday: 'short',
                                     year: 'numeric',
-                                    month: 'long',
+                                    month: 'short',
                                     day: 'numeric'
                                 })}
                             </p>
                         </div>
 
                         {/* Streak Badge */}
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-2xl ${streakActive ? 'bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30'
+                        <div className={`flex items-center gap-1.5 sm:gap-3 px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-2xl ${streakActive ? 'bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30'
                             : 'bg-dark-800/50 border border-dark-700'
                             }`}>
-                            <div className={`${streakActive ? 'text-orange-500' : 'text-dark-500'}`}>
+                            <div className={`${streakActive ? 'text-orange-500' : 'text-dark-500'} scale-[0.5] sm:scale-100`}>
                                 <FireIcon />
                             </div>
-                            <div>
-                                <div className="text-2xl font-bold text-white">{streak}</div>
-                                <div className="text-xs text-dark-400">Day Streak</div>
+                            <div className="flex flex-row sm:flex-col items-center sm:items-start gap-1 sm:gap-0">
+                                <div className="text-sm sm:text-2xl font-bold text-white leading-none">{streak}</div>
+                                <div className="text-[8px] sm:text-xs text-dark-400 font-medium">Streak</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="mt-6 glass-card p-4">
-                        <div className="flex justify-between items-center mb-2">
+                    <div className="mt-2 sm:mt-6 glass-card p-2 sm:p-4">
+                        <div className="flex justify-between items-center mb-1 sm:mb-2 text-[10px] sm:text-base">
                             <span className="text-dark-300">Today's Progress</span>
                             <span className="text-white font-semibold">
-                                {overallProgress.answered}/{overallProgress.total} Questions
+                                {overallProgress.answered}/{overallProgress.total} Qs
                             </span>
                         </div>
-                        <div className="h-3 bg-dark-700 rounded-full overflow-hidden">
+                        <div className="h-1.5 sm:h-3 bg-dark-700 rounded-full overflow-hidden">
                             <div
                                 className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
                                 style={{ width: `${(overallProgress.answered / overallProgress.total) * 100}%` }}
@@ -247,7 +247,7 @@ function DailyPractice() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1.5 sm:pb-2 hide-scrollbar">
                     {[
                         { id: 'practice', label: 'Practice', icon: '📝' },
                         { id: 'stats', label: 'Statistics', icon: '📊' },
@@ -256,12 +256,12 @@ function DailyPractice() {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${activeTab === tab.id
+                            className={`flex items-center gap-1.5 px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl whitespace-nowrap transition-all text-xs sm:text-base ${activeTab === tab.id
                                 ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
                                 : 'bg-dark-800/50 text-dark-400 border border-transparent hover:border-dark-600'
                                 }`}
                         >
-                            <span>{tab.icon}</span>
+                            <span className="text-sm sm:text-lg">{tab.icon}</span>
                             <span>{tab.label}</span>
                         </button>
                     ))}
@@ -281,26 +281,26 @@ function DailyPractice() {
                                     <button
                                         key={key}
                                         onClick={() => handleCategoryChange(key)}
-                                        className={`w-full p-4 rounded-2xl border transition-all text-left ${currentCategory === key
+                                        className={`w-full p-2 sm:p-4 rounded-lg sm:rounded-2xl border transition-all text-left ${currentCategory === key
                                             ? `bg-gradient-to-br ${config.bgGradient} ${config.borderColor}`
                                             : 'bg-dark-800/50 border-dark-700 hover:border-dark-600'
                                             }`}
                                     >
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className="text-2xl">{config.icon}</span>
-                                            <span className="font-semibold text-white">{config.title}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-dark-400">
+                                        <div className="flex items-center justify-between gap-2 mb-1 sm:mb-2">
+                                            <div className="flex items-center gap-1.5 sm:gap-3 overflow-hidden">
+                                                <span className="text-base sm:text-2xl flex-shrink-0">{config.icon}</span>
+                                                <span className="font-semibold text-white text-[10px] sm:text-base truncate">{config.title}</span>
+                                            </div>
+                                            <span className="text-[9px] sm:text-sm text-dark-400 flex-shrink-0">
                                                 {answered}/{catQuestions.length}
                                             </span>
-                                            {answered === catQuestions.length && catQuestions.length > 0 && (
-                                                <span className="text-success-400 text-sm">
-                                                    {correct}/{answered} correct
-                                                </span>
-                                            )}
                                         </div>
-                                        <div className="mt-2 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+                                        {answered === catQuestions.length && catQuestions.length > 0 && (
+                                            <div className="text-[8px] sm:text-xs text-success-400 mb-1 leading-none">
+                                                {correct}/{answered} correct
+                                            </div>
+                                        )}
+                                        <div className="mt-1.5 sm:mt-2 h-1 sm:h-1.5 bg-dark-700 rounded-full overflow-hidden">
                                             <div
                                                 className={`h-full bg-gradient-to-r ${config.gradient} rounded-full transition-all`}
                                                 style={{ width: `${(answered / catQuestions.length) * 100}%` }}
@@ -314,13 +314,13 @@ function DailyPractice() {
                         {/* Question Area */}
                         <div className="lg:col-span-3">
                             {currentQuestion ? (
-                                <div className="glass-card p-6 sm:p-8">
+                                <div className="glass-card p-4 sm:p-8">
                                     {/* Question Header */}
-                                    <div className="flex items-start justify-between gap-4 mb-6">
-                                        <div className={`px-3 py-1 rounded-full text-sm bg-gradient-to-r ${categoryConfig[currentCategory].bgGradient} ${categoryConfig[currentCategory].borderColor} border`}>
+                                    <div className="flex items-start justify-between gap-4 mb-3 sm:mb-6">
+                                        <div className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-sm bg-gradient-to-r ${categoryConfig[currentCategory].bgGradient} ${categoryConfig[currentCategory].borderColor} border`}>
                                             {categoryConfig[currentCategory].title}
                                         </div>
-                                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${currentQuestion.difficulty === 'easy' ? 'bg-success-500/20 text-success-400' :
+                                        <div className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-xs font-medium ${currentQuestion.difficulty === 'easy' ? 'bg-success-500/20 text-success-400' :
                                             currentQuestion.difficulty === 'medium' ? 'bg-warning-500/20 text-warning-400' :
                                                 'bg-error-500/20 text-error-400'
                                             }`}>
@@ -329,7 +329,7 @@ function DailyPractice() {
                                     </div>
 
                                     {/* Question Number */}
-                                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                                    <div className="flex gap-1 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-1.5 sm:pb-2 hide-scrollbar">
                                         {(questions?.[currentCategory] || []).map((q, idx) => (
                                             <button
                                                 key={idx}
@@ -347,7 +347,7 @@ function DailyPractice() {
                                                         setLastResult(null);
                                                     }
                                                 }}
-                                                className={`w-10 h-10 rounded-xl flex items-center justify-center font-medium transition-all ${currentQuestionIndex === idx
+                                                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-sm sm:text-base font-medium transition-all flex-shrink-0 ${currentQuestionIndex === idx
                                                     ? 'bg-primary-500 text-white scale-110'
                                                     : q.answered
                                                         ? q.isCorrect
@@ -362,7 +362,7 @@ function DailyPractice() {
                                     </div>
 
                                     {/* Question Text */}
-                                    <h2 className="text-xl sm:text-2xl font-semibold text-white mb-6 leading-relaxed">
+                                    <h2 className="text-sm sm:text-2xl font-semibold text-white mb-4 sm:mb-6 leading-relaxed">
                                         {currentQuestion.questionText}
                                     </h2>
 
@@ -379,7 +379,7 @@ function DailyPractice() {
                                                     key={option.id}
                                                     onClick={() => !isAnswered && handleAnswerSelect(option.id)}
                                                     disabled={isAnswered || isSubmitting}
-                                                    className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-4 ${isCorrect
+                                                    className={`w-full p-2.5 sm:p-4 rounded-lg sm:rounded-xl border text-left transition-all flex items-start gap-2.5 sm:gap-4 ${isCorrect
                                                         ? 'bg-success-500/20 border-success-500 text-white'
                                                         : isWrong
                                                             ? 'bg-error-500/20 border-error-500 text-white'
@@ -388,9 +388,9 @@ function DailyPractice() {
                                                                 : isAnswered
                                                                     ? 'bg-dark-800/50 border-dark-700 text-dark-400'
                                                                     : 'bg-dark-800/50 border-dark-700 text-dark-200 hover:border-dark-500 hover:bg-dark-700/50'
-                                                        }`}
+                                                        } text-xs sm:text-base`}
                                                 >
-                                                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-semibold flex-shrink-0 ${isCorrect
+                                                    <span className={`w-5 h-5 sm:w-8 sm:h-8 rounded-md sm:rounded-lg flex items-center justify-center font-semibold flex-shrink-0 text-[10px] sm:text-base ${isCorrect
                                                         ? 'bg-success-500 text-white'
                                                         : isWrong
                                                             ? 'bg-error-500 text-white'
@@ -423,26 +423,26 @@ function DailyPractice() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-dark-300">{lastResult.explanation}</p>
+                                            <p className="text-xs sm:text-base text-dark-300">{lastResult.explanation}</p>
                                         </div>
                                     )}
 
                                     {/* Action Buttons */}
-                                    <div className="flex justify-end gap-3">
+                                    <div className="flex justify-end gap-2 sm:gap-3">
                                         {!currentQuestion.answered && !showResult ? (
                                             <button
                                                 onClick={handleSubmitAnswer}
                                                 disabled={!selectedAnswer || isSubmitting}
-                                                className="btn-primary disabled:opacity-50"
+                                                className="btn-primary disabled:opacity-50 text-xs sm:text-base px-4 py-2 sm:px-6 sm:py-3"
                                             >
-                                                {isSubmitting ? 'Submitting...' : 'Submit Answer'}
+                                                {isSubmitting ? '...' : 'Submit'}
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={handleNextQuestion}
-                                                className="btn-primary"
+                                                className="btn-primary text-xs sm:text-base px-4 py-2 sm:px-6 sm:py-3"
                                             >
-                                                {isCompleted ? 'View Results' : 'Next Question →'}
+                                                {isCompleted ? 'Done' : 'Next →'}
                                             </button>
                                         )}
                                     </div>
