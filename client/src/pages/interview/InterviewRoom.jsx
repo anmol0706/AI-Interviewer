@@ -16,6 +16,8 @@ import {
     Brain,
     CheckCircle,
     AlertCircle,
+    AlertTriangle,
+    EyeOff,
     Loader2,
     Volume2,
     ChevronRight
@@ -57,8 +59,56 @@ export default function InterviewRoom() {
     const [showFeedback, setShowFeedback] = useState(false);
     const hasJoinedRef = useRef(false);
 
+    // Tab protection state
+    const [tabSwitchCount, setTabSwitchCount] = useState(0);
+    const [showTabWarning, setShowTabWarning] = useState(false);
+    const MAX_TAB_SWITCHES = 3;
+
     // Get socket from store (subscribe to it)
     const socket = useInterviewStore((state) => state.socket);
+
+    // Prevent tab close/refresh during active interview
+    useEffect(() => {
+        if (!isInterviewActive || showFeedback) return;
+
+        const handleBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = 'You have an interview in progress. Are you sure you want to leave?';
+            return e.returnValue;
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isInterviewActive, showFeedback]);
+
+    // Detect tab switches/visibility changes
+    useEffect(() => {
+        if (!isInterviewActive || showFeedback) return;
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setTabSwitchCount(prev => {
+                    const newCount = prev + 1;
+                    if (newCount >= MAX_TAB_SWITCHES) {
+                        toast.error(`Warning: You have switched tabs ${newCount} times. Your interview may be flagged.`);
+                    } else {
+                        toast.error(`Tab switch detected! (${newCount}/${MAX_TAB_SWITCHES} allowed)`);
+                    }
+                    return newCount;
+                });
+                setShowTabWarning(true);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [isInterviewActive, showFeedback]);
 
     // Initialize socket and join interview
     useEffect(() => {
@@ -84,13 +134,37 @@ export default function InterviewRoom() {
         }
     }, [sessionCompleted, session, navigate]);
 
-    // Handle session errors (e.g., session not found)
+    // Handle session errors (only navigate away for fatal errors like session not found)
+    const sessionErrorType = useInterviewStore((state) => state.sessionErrorType);
+    const sessionErrorRetryAfter = useInterviewStore((state) => state.sessionErrorRetryAfter);
+
     useEffect(() => {
         if (sessionError) {
-            toast.error(sessionError);
-            navigate('/dashboard');
+            if (sessionErrorType === 'rate_limit') {
+                // Rate limit error - show toast but don't navigate away
+                toast.error(sessionError, {
+                    duration: 5000,
+                    icon: '⏳'
+                });
+                // Clear the error so user can retry
+                setTimeout(() => {
+                    useInterviewStore.setState({
+                        sessionError: null,
+                        sessionErrorType: null,
+                        sessionErrorRetryAfter: null
+                    });
+                }, 1000);
+            } else if (sessionError.includes('Session not found') ||
+                sessionError.includes('Session was abandoned')) {
+                // Fatal error - navigate away
+                toast.error(sessionError);
+                navigate('/dashboard');
+            } else {
+                // Other errors - show toast but stay on page
+                toast.error(sessionError);
+            }
         }
-    }, [sessionError, navigate]);
+    }, [sessionError, sessionErrorType, navigate]);
 
     // Timer countdown
     useEffect(() => {
@@ -113,7 +187,12 @@ export default function InterviewRoom() {
         if (timer === 0 && isInterviewActive && !isProcessing) {
             const answer = currentAnswer || voiceAnalysis?.transcription;
             if (answer?.trim()) {
+                toast.success('Time\'s up! Submitting your answer...');
                 submitAnswerSocket(answer);
+            } else {
+                // No answer provided - submit as empty/skipped
+                toast.error('Time\'s up! Question skipped - marked as 0.');
+                submitAnswerSocket('[TIME_EXPIRED_NO_ANSWER]');
             }
             setTimer(120); // Reset timer
         }
@@ -213,6 +292,14 @@ export default function InterviewRoom() {
 
                 {/* Controls */}
                 <div className="flex items-center gap-1.5 sm:gap-2">
+                    {/* Tab Violation Indicator */}
+                    {tabSwitchCount > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-warning-500/20 text-warning-400 text-[10px] sm:text-xs">
+                            <EyeOff className="w-3 h-3" />
+                            <span>{tabSwitchCount}</span>
+                        </div>
+                    )}
+
                     {/* Timer */}
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] sm:text-xs font-mono ${timer <= 30 ? 'bg-error-500/20 text-error-400' : 'bg-dark-800/80 text-dark-400'}`}>
                         <Clock className="w-3 h-3" />
@@ -299,18 +386,28 @@ export default function InterviewRoom() {
                     >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                             <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
-                                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-success-400" />
-                                Answer Feedback
+                                {lastEvaluation.skipped ? (
+                                    <>
+                                        <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-warning-400" />
+                                        <span className="text-warning-400">Question Skipped</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-success-400" />
+                                        Answer Feedback
+                                    </>
+                                )}
                             </h3>
-                            <div className={`text-2xl sm:text-3xl font-bold ${getScoreColor(lastEvaluation.scores?.overall?.score || lastEvaluation.scores?.overall || 0)}`}>
-                                {lastEvaluation.scores?.overall?.score || lastEvaluation.scores?.overall || 0}%
+                            <div className={`text-2xl sm:text-3xl font-bold ${getScoreColor(typeof lastEvaluation.scores?.overall === 'object' ? lastEvaluation.scores?.overall?.score : lastEvaluation.scores?.overall ?? 0)}`}>
+                                {typeof lastEvaluation.scores?.overall === 'object' ? lastEvaluation.scores?.overall?.score : lastEvaluation.scores?.overall ?? 0}%
                             </div>
                         </div>
 
                         {/* Score Breakdown - 2 cols mobile, 5 cols desktop */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
                             {['correctness', 'reasoning', 'communication', 'structure', 'confidence'].map((metric) => {
-                                const score = lastEvaluation.scores?.[metric]?.score || 0;
+                                const scoreData = lastEvaluation.scores?.[metric];
+                                const score = typeof scoreData === 'object' ? (scoreData?.score ?? 0) : (scoreData ?? 0);
                                 return (
                                     <div key={metric} className="text-center">
                                         <div className={`text-lg sm:text-xl md:text-2xl font-bold ${getScoreColor(score)}`}>
@@ -324,27 +421,27 @@ export default function InterviewRoom() {
 
                         {/* Strengths & Weaknesses - Stack on mobile */}
                         <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 mb-4 sm:mb-6">
-                            {lastEvaluation.strengths?.length > 0 && (
+                            {lastEvaluation.feedback?.strengths?.length > 0 && (
                                 <div>
                                     <h4 className="text-sm font-medium text-success-400 mb-2">Strengths</h4>
                                     <ul className="space-y-1">
-                                        {lastEvaluation.strengths.slice(0, 3).map((s, i) => (
+                                        {lastEvaluation.feedback.strengths.slice(0, 3).map((s, i) => (
                                             <li key={i} className="text-dark-300 text-sm flex items-start gap-2">
                                                 <CheckCircle className="w-4 h-4 text-success-400 flex-shrink-0 mt-0.5" />
-                                                {s}
+                                                {typeof s === 'string' ? s : JSON.stringify(s)}
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
                             )}
-                            {lastEvaluation.weaknesses?.length > 0 && (
+                            {lastEvaluation.feedback?.weaknesses?.length > 0 && (
                                 <div>
                                     <h4 className="text-sm font-medium text-warning-400 mb-2">Areas to Improve</h4>
                                     <ul className="space-y-1">
-                                        {lastEvaluation.weaknesses.slice(0, 3).map((w, i) => (
+                                        {lastEvaluation.feedback.weaknesses.slice(0, 3).map((w, i) => (
                                             <li key={i} className="text-dark-300 text-sm flex items-start gap-2">
                                                 <AlertCircle className="w-4 h-4 text-warning-400 flex-shrink-0 mt-0.5" />
-                                                {w}
+                                                {typeof w === 'string' ? w : JSON.stringify(w)}
                                             </li>
                                         ))}
                                     </ul>
@@ -480,6 +577,45 @@ export default function InterviewRoom() {
                             Resume
                         </button>
                     </div>
+                </div>
+            )}
+
+            {/* Tab Switch Warning Modal */}
+            {showTabWarning && (
+                <div className="fixed inset-0 bg-dark-950/95 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-dark-900 border border-error-500/30 rounded-xl p-6 max-w-md text-center shadow-2xl"
+                    >
+                        <div className="w-16 h-16 rounded-full bg-error-500/20 flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle className="w-8 h-8 text-error-400" />
+                        </div>
+                        <h2 className="text-xl font-bold text-white mb-2">Tab Switch Detected!</h2>
+                        <p className="text-dark-400 text-sm mb-4">
+                            Switching tabs or windows during an interview is not allowed.
+                            This action has been recorded.
+                        </p>
+                        <div className="bg-dark-800/50 rounded-lg p-3 mb-4">
+                            <div className="flex items-center justify-center gap-2 text-warning-400">
+                                <EyeOff className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                    Violations: {tabSwitchCount} / {MAX_TAB_SWITCHES}
+                                </span>
+                            </div>
+                            {tabSwitchCount >= MAX_TAB_SWITCHES && (
+                                <p className="text-error-400 text-xs mt-2">
+                                    ⚠️ Maximum violations reached. Your interview may be invalidated.
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setShowTabWarning(false)}
+                            className="bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all"
+                        >
+                            Return to Interview
+                        </button>
+                    </motion.div>
                 </div>
             )}
         </div>

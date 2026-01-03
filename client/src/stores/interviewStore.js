@@ -27,6 +27,8 @@ export const useInterviewStore = create((set, get) => ({
     socket: null,
     isConnected: false,
     sessionError: null,
+    sessionErrorType: null,
+    sessionErrorRetryAfter: null,
 
     // Audio recording (Web Speech API)
     speechRecognition: null,
@@ -60,6 +62,8 @@ export const useInterviewStore = create((set, get) => ({
             // Set error state so components can handle it
             set({
                 sessionError: error.message || 'An error occurred',
+                sessionErrorType: error.type || 'general',
+                sessionErrorRetryAfter: error.retryAfter || null,
                 isProcessing: false
             });
         });
@@ -361,6 +365,8 @@ export const useInterviewStore = create((set, get) => ({
             isPaused: false,
             sessionCompleted: false,
             sessionError: null,
+            sessionErrorType: null,
+            sessionErrorRetryAfter: null,
             responses: [],
             currentAnswer: '',
             lastEvaluation: null,

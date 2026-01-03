@@ -174,19 +174,53 @@ export function initializeSocket(io) {
                 const currentResponse = session.responses[session.currentQuestionIndex];
                 const voiceAnalysis = socket.lastVoiceAnalysis || null;
 
-                // Evaluate answer
-                const evaluation = await geminiService.evaluateAnswer(
-                    sessionId,
-                    currentResponse.question,
-                    answer,
-                    voiceAnalysis
-                );
+                let evaluation;
+                let scores;
 
-                // Calculate scores
-                const scores = analyticsService.calculateResponseScore(evaluation, voiceAnalysis);
+                // Check if this is a timed-out/skipped answer
+                const isSkipped = answer === '[TIME_EXPIRED_NO_ANSWER]' || !answer?.trim();
+
+                if (isSkipped) {
+                    // No answer provided - assign 0 scores
+                    evaluation = {
+                        correctness: 0,
+                        reasoning: 0,
+                        communication: 0,
+                        confidence: 0,
+                        structure: 0,
+                        overall: 0,
+                        strengths: [],
+                        weaknesses: ['No answer was provided for this question.'],
+                        suggestions: ['Make sure to provide an answer within the time limit.'],
+                        keyTopicsCovered: [],
+                        keyTopicsMissed: currentResponse.question?.expectedTopics || []
+                    };
+                    scores = {
+                        correctness: { score: 0, maxScore: 100, feedback: 'No answer provided' },
+                        reasoning: { score: 0, maxScore: 100, feedback: 'No answer provided' },
+                        communication: { score: 0, maxScore: 100, feedback: 'No answer provided' },
+                        confidence: { score: 0, maxScore: 100, feedback: 'No answer provided' },
+                        structure: { score: 0, maxScore: 100, feedback: 'No answer provided' },
+                        overall: 0  // overall is a Number, not an object
+                    };
+                } else {
+                    // Evaluate answer with AI
+                    evaluation = await geminiService.evaluateAnswer(
+                        sessionId,
+                        currentResponse.question,
+                        answer,
+                        voiceAnalysis
+                    );
+                    // Calculate scores
+                    scores = analyticsService.calculateResponseScore(evaluation, voiceAnalysis);
+                }
 
                 // Update session
-                currentResponse.answer = { text: answer, duration: 0 };
+                currentResponse.answer = {
+                    text: isSkipped ? '' : answer,
+                    duration: 0,
+                    skipped: isSkipped
+                };
                 currentResponse.voiceAnalysis = voiceAnalysis || {};
                 currentResponse.scores = scores;
                 currentResponse.aiAnalysis = {
@@ -201,6 +235,7 @@ export function initializeSocket(io) {
                 // Emit evaluation result
                 socket.emit('answer-evaluated', {
                     scores,
+                    skipped: isSkipped,
                     feedback: {
                         strengths: evaluation.strengths,
                         weaknesses: evaluation.weaknesses,
@@ -312,7 +347,27 @@ export function initializeSocket(io) {
 
             } catch (error) {
                 logger.error('Answer submission error:', error);
-                socket.emit('error', { message: 'Failed to process answer' });
+
+                // Check if this is a rate limit error
+                const isRateLimitError = error.status === 429 ||
+                    error.message?.includes('429') ||
+                    error.message?.includes('quota') ||
+                    error.message?.includes('RESOURCE_EXHAUSTED') ||
+                    error.message?.includes('rate limit');
+
+                if (isRateLimitError) {
+                    // Extract retry delay if available
+                    const retryMatch = error.message?.match(/retry in (\d+(?:\.\d+)?)/i);
+                    const retryDelay = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 60;
+
+                    socket.emit('error', {
+                        message: `AI service is temporarily busy. Please wait ${retryDelay} seconds and try again.`,
+                        type: 'rate_limit',
+                        retryAfter: retryDelay
+                    });
+                } else {
+                    socket.emit('error', { message: 'Failed to process answer. Please try again.' });
+                }
             }
         });
 
