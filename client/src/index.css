@@ -374,6 +374,32 @@
     content: '|';
     @apply animate-pulse ml-0.5;
   }
+
+  /* Fade in from bottom animation */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Step animation with stagger effect */
+  .step-animate {
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  .step-animate-1,
+  .step-animate-2,
+  .step-animate-3,
+  .step-animate-4 {
+    /* No delay - animates immediately when visible */
+  }
 }
 
 /* Dark mode transitions */
@@ -427,6 +453,11 @@ iframe {
 .safe-area-padding {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Safe area bottom padding utility */
+.pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -595,4 +626,103 @@ iframe {
 .animate-confetti-3 {
   animation: confetti-fall-3 2.2s ease-in infinite;
   animation-delay: 0.4s;
+}
+
+/* ========================================
+   Swiper Carousel Customization
+   ======================================== */
+
+/* Testimonials Swiper */
+.testimonials-swiper {
+  padding: 20px 0 !important;
+  overflow: visible !important;
+}
+
+.testimonials-swiper .swiper-wrapper {
+  padding-bottom: 40px;
+}
+
+/* Pagination bullets with gradient */
+.testimonials-swiper .swiper-pagination-bullet {
+  background: linear-gradient(to right, #0ea5e9, #a855f7);
+  opacity: 0.5;
+  width: 10px;
+  height: 10px;
+  transition: all 0.3s ease;
+}
+
+.testimonials-swiper .swiper-pagination-bullet-active {
+  opacity: 1;
+  transform: scale(1.3);
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+}
+
+/* Responsive slide widths */
+.testimonials-swiper .swiper-slide {
+  width: 90% !important;
+  max-width: 400px;
+  height: auto !important;
+}
+
+@media (min-width: 640px) {
+  .testimonials-swiper .swiper-slide {
+    width: 45% !important;
+    max-width: 450px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .testimonials-swiper .swiper-slide {
+    width: 33% !important;
+    max-width: 380px;
+  }
+}
+
+/* Swiper slide transition effects */
+.testimonials-swiper .swiper-slide {
+  transition: transform 0.3s ease;
+}
+
+.testimonials-swiper .swiper-slide-active {
+  z-index: 2;
+}
+
+/* Coverflow effect customization */
+.swiper-3d .swiper-slide-shadow-left,
+.swiper-3d .swiper-slide-shadow-right {
+  background-image: linear-gradient(to left,
+      rgba(14, 165, 233, 0.1),
+      rgba(168, 85, 247, 0.1));
+}
+
+/* ========================================
+   Skipper UI Style Animations
+   ======================================== */
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes marquee2 {
+  0% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee2 {
+  animation: marquee2 25s linear infinite;
 }
